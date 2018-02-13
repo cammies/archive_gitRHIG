@@ -7,13 +7,11 @@ gitDIGR (for **git** **D**evelopment **I**nformation **G**rabber for **R**eposit
 
 ## collector.py
 
-
 List or batch-retrieve the repositories associated with a particular GitHub user account.
-
 
 | argument | type | description |
 |----------|------|-------------|
-| \-s, \-\-sources | string | semi\-colon\-separated list of repository URLs \(or an input file containing the same\) |
+| \-s, \-\-sources | string | semi\-colon\-separated list of repository URLs, or an input text file containing the same |
 | \-\-host | string | HTTPS GitHub hostname |
 | \-p, \-\-password | flag | prompt for GitHub username and password |
 | \-t, \-\-token | flag | prompt for GitHub access token |
@@ -39,21 +37,20 @@ $ python collector.py --host https://github.com -u {user} -p
 $ python collector.py -s https://{github.host.name}/{repo_owner}/{repo_name} -r -a -b
 ```
 
-**3. Retrieve some set of repositories created after January 01, 1970:**
+**3. Retrieve some set of repositories created after Jan. 01, 1970:**
 ```
 $ python collector.py -s {repo_urls_list_file} -r --since 1970-01-01
 ```
 
 
+
 ## scraper.py
 
-
-Generate commit records for a set of git repositories and export this information to a data store.
-
+Obtain commit history information for a set of git repositories in tabular format and export the resulting records to a data store.
 
 | argument | type | description |
 |----------|------|-------------|
-| \-s, \-\-sources | string | semi\-colon\-separated list of repository paths in local working environment  \(or an input file containing the same\) |
+| \-s, \-\-sources | string | semi\-colon\-separated list of repository paths \(relative to local working environment\), or an input text file containing the same |
 | \-a, \-\-anonymize | flag | apply anonymization in repository changelog data |
 | \-\-paths\-in\-repo | string | comma-separated list of paths to process for all repositories |
 | \-\-files\-in\-repo | string | comma-separated list of files to process for all repositories |
