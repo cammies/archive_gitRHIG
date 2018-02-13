@@ -29,19 +29,19 @@ List or batch-retrieve the repositories associated with a particular GitHub user
 
 ### Example Usage
 
-**1. List all (assessible) repositories of some user:**
+**1. List all (accessible) repositories associated with particular GitHub user:**
 ```
-$ python collector.py --host "https://github.com" -u "{user}"
-```
-
-**2. Retrieve anonymized, bare repository:**
-```
-$ python collector.py -s "https://{github.hostname}/{repo_owner}/{repo_name}" -r -a -b
+$ python collector.py --host https://github.com -u {user} -p
 ```
 
-**3. Retrieve set of repositories created after Jan. 01, 1970:**
+**2. Retrieve an anonymized, bare repository:**
 ```
-$ python collector.py -s "{repo_urls_file}" -r --since "2017-01-01"
+$ python collector.py -s https://{github.host.name}/{repo_owner}/{repo_name} -r -a -b
+```
+
+**3. Retrieve some set of repositories created after January 01, 1970:**
+```
+$ python collector.py -s {repo_urls_list_file} -r --since 1970-01-01
 ```
 
 
