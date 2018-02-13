@@ -7,7 +7,9 @@ gitDIGR (for **git** **D**evelopment **I**nformation **G**rabber for **R**eposit
 
 ## collector.py
 
+
 List or batch-retrieve the \(visible\) repositories of some GitHub user.
+
 
 | argument | type | description |
 |----------|------|-------------|
@@ -25,7 +27,8 @@ List or batch-retrieve the \(visible\) repositories of some GitHub user.
 | \-d, \-\-directory | string | runtime working directory |
 | \-o, \-\-outfile | string | output file containing semi\-colon\-separated list paths of cloned repository paths in local working environment |
 
-### Useage
+### Usage
+
 1. Example \- list all (assessible) repositories of some user:
 ```
 $ python collector.py --host "https://github.com" -u "{user}"
@@ -38,13 +41,15 @@ $ python collector.py -s "https://{github.hotstname}/{repo_owner}/{repo_name}" -
 
 3. Example \- retrieve set of repositories created after Jan. 01, 1970:
 ```
-$ python collector.py -s "{repo_urls_file}" --since "2017-01-01"
+$ python collector.py -s "{repo_urls_file}" -r --since "2017-01-01"
 ```
 
 
 ## scraper.py
 
+
 Generate the commit records for a set of git repositories and export this information to a data store.
+
 
 | argument | type | description |
 |----------|------|-------------|
@@ -57,35 +62,46 @@ Generate the commit records for a set of git repositories and export this inform
 | \-\-until | string | consider only repository commits performed before a specific date |
 | \-\-since | string | consider only repository commits performed after a specific date |
 
-### Useage
-1. Example \- export anonymized repository commit information to some data store:
+
+### Usage
+
+1. Example \- export repository commit information to some data store:
 ```
-$ python scraper.py -s "{local/path/to/repo}" -a --data-store "{ds_object}"
+$ python scraper.py -s "{local/path/to/repo}" --data-store "{ds_object}"
 ```
 
-2. Example \- export repository commit information concerning a specific path and a specific directory:
+2. Example \- export repository commit information concerning a specific path and a specific file:
 ```
 $ python scraper.py -s "{local/path/to/repo}{?path=some_path}{&file=some_file}" --data-store "{ds_object}"
 ```
 
-3. Example \- export anonymized repository commit information modified after Jan. 01, 1970:
+3. Example \- export anonymized repository commit information for any commits performed after Jan. 01, 1970:
 ```
 $ python scraper.py -s "{local/path/to/repo}" -a --data-store "{ds_object} --since "2017-01-01"
 ```
 
-3. Example \- export repository commit information concerning a particular path for some set of repositories:
+4. Example \- export repository commit information concerning a particular path for some set of repositories:
 ```
 $ python scraper.py -s "{repo_local_paths_file}" --paths-in-repo "{some_path} --data-store "{ds_object}"
 ```
+
 
 
 ## analyzer.py
 
 Generate statistical information based on a set of repository commit records. Statistics correspond to a set of repository metrics and are presented in terms of frequency distribution tables \(spreadsheets files\) and distribution graphics \(HTML file\).
 
+
 | argument | type | description |
 |----------|------|-------------|
 | \-\-data\-store | string | specify data store object |
+
+
+1. Example \- generate statistics for a set of repositories stored in some data store:
+```
+$ python analyzer.py --data-store "{ds_object}"
+```
+
 
 
 ## Required Python Modules
@@ -105,4 +121,3 @@ Generate statistical information based on a set of repository commit records. St
 - textwrap
 - time
 - urlparse
-
