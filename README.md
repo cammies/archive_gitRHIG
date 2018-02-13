@@ -116,3 +116,9 @@ $ python analyzer.py --data-store {ds_object}
 - textwrap
 - time
 - urlparse
+
+
+
+## Additional Requirements
+- GitHub user account
+- Configuration of GitHub account with SSH
