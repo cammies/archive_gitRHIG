@@ -11,7 +11,7 @@ List or batch-retrieve the \(visible\) repositories of some GitHub user.
 
 | argument | type | description |
 |----------|------|-------------|
-| \-s, \-\-sources | string | semi\-colon\-separated list of repository URLs \(or an input file containing the same\) |
+| \-s, \-\-sources | string | semi\-colon\-separated list of repository URLs \(or an input file containing the same\); Expected syntax: 'https://{github.hotstname/repo_owner/repo_name}' |
 | \-\-host | string | HTTPS GitHub hostname |
 | \-p, \-\-password | flag | prompt for GitHub username and password |
 | \-t, \-\-token | flag | prompt for GitHub access token |
@@ -32,10 +32,10 @@ Generate the commit records for a set of git repositories and export this inform
 
 | argument | type | description |
 |----------|------|-------------|
-| \-s, \-\-sources | string | semi\-colon\-separated list of repository paths in local working environment  \(or an input file containing the same\) |
+| \-s, \-\-sources | string | semi\-colon\-separated list of repository paths in local working environment  \(or an input file containing the same\); Expected syntax: 'local/path/to/repo{?path=some_path&file=some_file}' |
 | \-a, \-\-anonymize | flag | apply anonymization in repository changelog data |
-| \-\-paths\-in\-repo | string | comma-separated list of paths to process in repositories |
-| \-\-files\-in\-repo | string | comma-separated list of files to process in repositories |
+| \-\-paths\-in\-repo | string | comma-separated list of paths to process for all repositories |
+| \-\-files\-in\-repo | string | comma-separated list of files to process for all repositories |
 | \-\-data\-store | string | specify data store object |
 | \-q, \-\-query | string | process only repositories containing specific tokens within their URLs |
 | \-\-until | string | consider only repository commits performed before a specific date |
