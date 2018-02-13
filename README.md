@@ -27,7 +27,7 @@ List or batch-retrieve the repositories associated with a particular GitHub user
 
 ### Example Usage
 
-**1. List all (accessible) repositories associated with particular GitHub user:**
+**1. List all (accessible) repository HTTPS URLs associated with particular GitHub user:**
 ```
 $ python collector.py --host https://github.com -u {user} -p
 ```
@@ -84,8 +84,7 @@ $ python scraper.py -s {relative/path/to/reposotory} --paths-in-repo {path_1, pa
 
 ## analyzer.py
 
-Generate statistical information based on a set of repository commit records. Statistics correspond to a set of repository metrics and are presented in terms of frequency distribution tables \(spreadsheets files\) and distribution graphics \(HTML file\).
-
+Generate statistical information based on a set of repository commit records. This information corresponds to a set of repository metrics \(based on attributes observable in revision history\), and are presented as frequency distribution tables \(spreadsheets files\) and distribution graphics \(HTML file\).
 
 | argument | type | description |
 |----------|------|-------------|
@@ -93,14 +92,14 @@ Generate statistical information based on a set of repository commit records. St
 
 ### Example Usage
 
-**1. Generate statistics for a set of repositories stored in some data store:**
+**1. Generate repository statistics for a set of commit records accessible in some data store:**
 ```
-$ python analyzer.py --data-store "{ds_object}"
+$ python analyzer.py --data-store {ds_object}
 ```
 
 
 
-## Required Python Modules
+# Required Python Modules
 - argparse
 - bokeh
 - collections
