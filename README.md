@@ -48,12 +48,12 @@ $ python collector.py -s "{repo_urls_file}" -r --since "2017-01-01"
 ## scraper.py
 
 
-Generate the commit records for a set of git repositories and export this information to a data store.
+Generate commit records for a set of git repositories and export this information to a data store.
 
 
 | argument | type | description |
 |----------|------|-------------|
-| \-s, \-\-sources | string | semi\-colon\-separated list of repository paths in local working environment  \(or an input file containing the same\); Expected syntax: '' |
+| \-s, \-\-sources | string | semi\-colon\-separated list of repository paths in local working environment  \(or an input file containing the same\) |
 | \-a, \-\-anonymize | flag | apply anonymization in repository changelog data |
 | \-\-paths\-in\-repo | string | comma-separated list of paths to process for all repositories |
 | \-\-files\-in\-repo | string | comma-separated list of files to process for all repositories |
