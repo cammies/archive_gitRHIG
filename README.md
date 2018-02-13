@@ -11,7 +11,7 @@ List or batch-retrieve the \(visible\) repositories of some GitHub user.
 
 | argument | type | description |
 |----------|------|-------------|
-| \-s, \-\-sources | string | semi\-colon\-separated list of repository URLs \(or an input file containing the same\); Expected syntax: 'https://{github.hotstname/repo_owner/repo_name}' |
+| \-s, \-\-sources | string | semi\-colon\-separated list of repository URLs \(or an input file containing the same\) |
 | \-\-host | string | HTTPS GitHub hostname |
 | \-p, \-\-password | flag | prompt for GitHub username and password |
 | \-t, \-\-token | flag | prompt for GitHub access token |
@@ -25,6 +25,21 @@ List or batch-retrieve the \(visible\) repositories of some GitHub user.
 | \-d, \-\-directory | string | runtime working directory |
 | \-o, \-\-outfile | string | output file containing semi\-colon\-separated list paths of cloned repository paths in local working environment |
 
+### Useage
+1. Example \- list all (visible) repositories of some user, "user":
+```
+$ python collector.py --host "https://github.com" -u "{user}"
+```
+
+2. Example \- retrieve anonymized, bare repository:
+```
+$ python collector.py -s "https://{github.hotstname}/{repo_owner}/{repo_name} -r -a -b"
+```
+
+3. Example \- retrieve set of repositories since Jan. 01, 1970:
+```
+$ python collector.py -s "{repo} -since "2017-01-01""
+```
 
 ## scraper.py
 
