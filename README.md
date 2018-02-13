@@ -36,7 +36,7 @@ $ python collector.py --host "https://github.com" -u "{user}"
 
 2. Retrieve anonymized, bare repository:
 ```
-$ python collector.py -s "https://{github.hotstname}/{repo_owner}/{repo_name}" -r -a -b
+$ python collector.py -s "https://{github.hostname}/{repo_owner}/{repo_name}" -r -a -b
 ```
 
 3. Retrieve set of repositories created after Jan. 01, 1970:
