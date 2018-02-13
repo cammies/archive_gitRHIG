@@ -67,7 +67,7 @@ $ python scraper.py -s {relative/path/to/reposotory} --data-store {ds_object}
 
 **2. Export repository commit information concerning a specific path and a specific file:**
 ```
-$ python scraper.py -s {relative/path/to/reposotory}{?}{path=path1}{&}{file=file1} --data-store {ds_object}
+$ python scraper.py -s {relative/path/to/reposotory}{?}{path=path_1}{&}{file=file_1} --data-store {ds_object}
 ```
 
 **3. Export anonymized repository commit information for any commits performed after Jan. 01, 1970:**
