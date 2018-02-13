@@ -99,7 +99,9 @@ $ python analyzer.py --data-store {ds_object}
 
 
 
-# Required Python Modules
+# Requirements
+
+## Python Modules:
 - argparse
 - bokeh
 - collections
@@ -117,8 +119,6 @@ $ python analyzer.py --data-store {ds_object}
 - time
 - urlparse
 
-
-
-## Additional Requirements
+## Environment Setup:
 - GitHub user account
-- Configuration of GitHub account with SSH
+- Configuration of GitHub account with SSH (Secure Shell)
