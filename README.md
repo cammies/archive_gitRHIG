@@ -26,7 +26,7 @@ List or batch-retrieve the \(visible\) repositories of some GitHub user.
 | \-o, \-\-outfile | string | output file containing semi\-colon\-separated list paths of cloned repository paths in local working environment |
 
 ### Useage
-1. Example \- list all (visible) repositories of some user, "user":
+1. Example \- list all (assessible) repositories of some user:
 ```
 $ python collector.py --host "https://github.com" -u "{user}"
 ```
@@ -36,10 +36,11 @@ $ python collector.py --host "https://github.com" -u "{user}"
 $ python collector.py -s "https://{github.hotstname}/{repo_owner}/{repo_name}" -r -a -b
 ```
 
-3. Example \- retrieve set of repositories since Jan. 01, 1970:
+3. Example \- retrieve set of repositories created after Jan. 01, 1970:
 ```
 $ python collector.py -s "{repo_urls_file}" --since "2017-01-01"
 ```
+
 
 ## scraper.py
 
@@ -47,7 +48,7 @@ Generate the commit records for a set of git repositories and export this inform
 
 | argument | type | description |
 |----------|------|-------------|
-| \-s, \-\-sources | string | semi\-colon\-separated list of repository paths in local working environment  \(or an input file containing the same\); Expected syntax: 'local/path/to/repo{?path=some_path&file=some_file}' |
+| \-s, \-\-sources | string | semi\-colon\-separated list of repository paths in local working environment  \(or an input file containing the same\); Expected syntax: '' |
 | \-a, \-\-anonymize | flag | apply anonymization in repository changelog data |
 | \-\-paths\-in\-repo | string | comma-separated list of paths to process for all repositories |
 | \-\-files\-in\-repo | string | comma-separated list of files to process for all repositories |
@@ -55,6 +56,27 @@ Generate the commit records for a set of git repositories and export this inform
 | \-q, \-\-query | string | process only repositories containing specific tokens within their URLs |
 | \-\-until | string | consider only repository commits performed before a specific date |
 | \-\-since | string | consider only repository commits performed after a specific date |
+
+### Useage
+1. Example \- export anonymized repository commit information to some data store:
+```
+$ python scraper.py -s "{local/path/to/repo}" -a --data-store "{ds_object}"
+```
+
+2. Example \- export repository commit information concerning a specific path and a specific directory:
+```
+$ python scraper.py -s "{local/path/to/repo}{?path=some_path}{&file=some_file}" --data-store "{ds_object}"
+```
+
+3. Example \- export anonymized repository commit information modified after Jan. 01, 1970:
+```
+$ python scraper.py -s "{local/path/to/repo}" -a --data-store "{ds_object} --since "2017-01-01"
+```
+
+3. Example \- export repository commit information concerning a particular path for some set of repositories:
+```
+$ python scraper.py -s "{repo_local_paths_file}" --paths-in-repo "{some_path} --data-store "{ds_object}"
+```
 
 
 ## analyzer.py
