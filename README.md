@@ -51,35 +51,33 @@ Obtain commit history information for a set of git repositories in tabular forma
 | argument | type | description |
 |----------|------|-------------|
 | \-s, \-\-sources | string | semi\-colon\-separated list of repository paths \(relative to local working environment\), or an input text file containing the same |
-| \-a, \-\-anonymize | flag | apply anonymization in repository changelog data |
-| \-\-paths\-in\-repo | string | comma-separated list of paths to process for all repositories |
-| \-\-files\-in\-repo | string | comma-separated list of files to process for all repositories |
+| \-a, \-\-anonymize | flag | apply anonymization to resulting repository commit records |
+| \-\-paths\-in\-repo | string | comma-separated list of paths to process relative to all repositories |
+| \-\-files\-in\-repo | string | comma-separated list of files to process relative to all repositories |
 | \-\-data\-store | string | specify data store object |
-| \-q, \-\-query | string | process only repositories containing specific tokens within their URLs |
-| \-\-until | string | consider only repository commits performed before a specific date |
-| \-\-since | string | consider only repository commits performed after a specific date |
-
+| \-\-until | string | consider only repository commits performed before a particular date |
+| \-\-since | string | consider only repository commits performed after a particular date |
 
 ### Example Usage
 
-**1.  Export repository commit information to some data store:**
+**1. Export repository commit information to some data store:**
 ```
-$ python scraper.py -s "{local/path/to/repo}" --data-store "{ds_object}"
+$ python scraper.py -s {relative/path/to/reposotory} --data-store {ds_object}
 ```
 
 **2. Export repository commit information concerning a specific path and a specific file:**
 ```
-$ python scraper.py -s "{local/path/to/repo}{?path=some_path}{&file=some_file}" --data-store "{ds_object}"
+$ python scraper.py -s {relative/path/to/reposotory}{?}{path=some_path}{&}{file=some_file} --data-store {ds_object}
 ```
 
 **3. Export anonymized repository commit information for any commits performed after Jan. 01, 1970:**
 ```
-$ python scraper.py -s "{local/path/to/repo}" -a --data-store "{ds_object} --since "2017-01-01"
+$ python scraper.py -s {relative/path/to/reposotory} -a --data-store {ds_object} --since 1970-01-01
 ```
 
-**4. Export repository commit information concerning a particular path for some set of repositories:**
+**4. Export repository commit information concerning particular paths for some set of repositories:**
 ```
-$ python scraper.py -s "{repo_local_paths_file}" --paths-in-repo "{some_path} --data-store "{ds_object}"
+$ python scraper.py -s {relative/path/to/reposotory} --paths-in-repo {path_1, path_2,..., path_n} --data-store {ds_object}
 ```
 
 
