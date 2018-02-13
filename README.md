@@ -29,17 +29,17 @@ List or batch-retrieve the \(visible\) repositories of some GitHub user.
 
 ### Example Usage
 
-1. List all (assessible) repositories of some user:
+**1. List all (assessible) repositories of some user:**
 ```
 $ python collector.py --host "https://github.com" -u "{user}"
 ```
 
-2. Retrieve anonymized, bare repository:
+**2. Retrieve anonymized, bare repository:**
 ```
 $ python collector.py -s "https://{github.hostname}/{repo_owner}/{repo_name}" -r -a -b
 ```
 
-3. Retrieve set of repositories created after Jan. 01, 1970:
+**3. Retrieve set of repositories created after Jan. 01, 1970:**
 ```
 $ python collector.py -s "{repo_urls_file}" -r --since "2017-01-01"
 ```
@@ -65,22 +65,22 @@ Generate commit records for a set of git repositories and export this informatio
 
 ### Example Usage
 
-1.  Export repository commit information to some data store:
+**1.  Export repository commit information to some data store:**
 ```
 $ python scraper.py -s "{local/path/to/repo}" --data-store "{ds_object}"
 ```
 
-2. Export repository commit information concerning a specific path and a specific file:
+**2. Export repository commit information concerning a specific path and a specific file:**
 ```
 $ python scraper.py -s "{local/path/to/repo}{?path=some_path}{&file=some_file}" --data-store "{ds_object}"
 ```
 
-3. Export anonymized repository commit information for any commits performed after Jan. 01, 1970:
+**3. Export anonymized repository commit information for any commits performed after Jan. 01, 1970:**
 ```
 $ python scraper.py -s "{local/path/to/repo}" -a --data-store "{ds_object} --since "2017-01-01"
 ```
 
-4. Export repository commit information concerning a particular path for some set of repositories:
+**4. Export repository commit information concerning a particular path for some set of repositories:**
 ```
 $ python scraper.py -s "{repo_local_paths_file}" --paths-in-repo "{some_path} --data-store "{ds_object}"
 ```
@@ -98,7 +98,7 @@ Generate statistical information based on a set of repository commit records. St
 
 ### Example Usage
 
-1. Generate statistics for a set of repositories stored in some data store:
+**1. Generate statistics for a set of repositories stored in some data store:**
 ```
 $ python analyzer.py --data-store "{ds_object}"
 ```
