@@ -33,12 +33,12 @@ $ python collector.py --host "https://github.com" -u "{user}"
 
 2. Example \- retrieve anonymized, bare repository:
 ```
-$ python collector.py -s "https://{github.hotstname}/{repo_owner}/{repo_name} -r -a -b"
+$ python collector.py -s "https://{github.hotstname}/{repo_owner}/{repo_name}" -r -a -b
 ```
 
 3. Example \- retrieve set of repositories since Jan. 01, 1970:
 ```
-$ python collector.py -s "{repo} -since "2017-01-01""
+$ python collector.py -s "{repo_urls_file}" --since "2017-01-01"
 ```
 
 ## scraper.py
