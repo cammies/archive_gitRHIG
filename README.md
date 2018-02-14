@@ -119,7 +119,7 @@ $ python analyzer.py --data-store {ds_object}
 - time
 - urlparse
 
-* May require install
+\* May require install
 
 ## Environment Setup:
 - GitHub user account
