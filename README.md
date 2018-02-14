@@ -103,11 +103,16 @@ $ python analyzer.py --data-store {ds_object}
 
 ## Python Modules:
 - argparse
+- ast
 - bokeh*
 - collections
 - datetime
+- python-dateutil (as dateutil)
 - getpass
+- hashlib
 - io
+- json
+- math
 - numpy*
 - os
 - pandas*
