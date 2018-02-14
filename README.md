@@ -127,5 +127,5 @@ $ python analyzer.py --data-store {ds_object}
 \* May require install
 
 ## Environment Setup:
-- GitHub user account
+- [GitHub user account](https://github.com/join)
 - [Configuration of GitHub account with SSH \(Secure Shell\)](https://help.github.com/articles/connecting-to-github-with-ssh/)
