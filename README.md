@@ -128,4 +128,4 @@ $ python analyzer.py --data-store {ds_object}
 
 ## Environment Setup:
 - GitHub user account
-- [Configuration of GitHub account with SSH (Secure Shell)] (https://help.github.com/articles/connecting-to-github-with-ssh/)
+- [Configuration of GitHub account with SSH \(Secure Shell\)](https://help.github.com/articles/connecting-to-github-with-ssh/)
