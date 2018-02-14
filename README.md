@@ -104,7 +104,7 @@ $ python analyzer.py --data-store {ds_object}
 ## Python Modules:
 - argparse
 - ast
-- bokeh*
+- [bokeh](https://pypi.python.org/pypi/bokeh)*
 - collections
 - datetime
 - [dateutil](https://pypi.python.org/pypi/python-dateutil/)*
@@ -113,17 +113,17 @@ $ python analyzer.py --data-store {ds_object}
 - io
 - json
 - math
-- numpy*
+- [numpy](https://pypi.python.org/pypi/numpy)*
 - os
-- pandas*
+- [pandas](https://pypi.python.org/pypi/pandas)*
 - re
-- requests*
+- [requests](https://pypi.python.org/pypi/requests)*
 - subprocess
 - sys
 - textwrap
 - time
 - urlparse
-- xlwt*
+- [xlwt](https://pypi.python.org/pypi/xlwt)*
 
 \* May require install
 
