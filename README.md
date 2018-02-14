@@ -107,7 +107,7 @@ $ python analyzer.py --data-store {ds_object}
 - bokeh*
 - collections
 - datetime
-- python-dateutil (as dateutil)*
+- [dateutil](https://pypi.python.org/pypi/python-dateutil/)*
 - getpass
 - hashlib
 - io
