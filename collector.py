@@ -404,19 +404,22 @@ def update_local_repo(repo_url):
         
     else: # ...Or just update existing repo...
    
-        print("Updating repo...");
         
         bare = is_bare_repo(abspath_to_repo);
         
         gd = '--git-dir=\'' + abspath_to_repo + '/.git/\'';
         
         if (bare):
+            print("Updating bare repo...");
+            
             sp = subprocess.Popen(('git %s fetch %s' % (gd,url)),
                                   stdout=FNULL,
                                   stderr=FNULL,
                                   shell=True);
             sp.wait();
         else:
+            print("Updating repo...");
+            
             wt = '--work-tree=\'' + abspath_to_repo + '\'';
             h = '--hard HEAD';
             x = '-xffd';
