@@ -5,7 +5,7 @@
 gitDIGR (for **git** **D**evelopment **I**nformation **G**rabber for **R**epositories) is a toolset for collecting, scraping, and analyzing the changelog information observable in a set of git repositores. The gitDIGR framework consists of Python scripts that are designed to assist with tasks oriented toward mining git repositories to obtain information and insights on repository commit activity and events.
 
 
-## collector.py
+## collector
 
 List or batch-retrieve the repositories associated with a particular GitHub user account.
 
@@ -44,7 +44,7 @@ $ python collector.py -s {repository_urls_list_file} -r --since 1970-01-01
 
 
 
-## scraper.py
+## scraper
 
 Obtain commit history information for a set of git repositories in tabular format and export the resulting records to a data store.
 
@@ -82,7 +82,7 @@ $ python scraper.py -s {relative/path/to/repository} --paths-in-repo {path_1, pa
 
 
 
-## analyzer.py
+## analyzer
 
 Generate statistical information based on a set of repository commit records. This information corresponds to a set of repository metrics \(based on attributes observable in revision history\), and are presented as frequency distribution tables \(spreadsheets files\) and distribution graphics \(HTML file\).
 
