@@ -25,7 +25,7 @@ List or batch-retrieve the repositories associated with a particular GitHub user
 | \-d, \-\-directory | string | runtime working directory for cloned repositores |
 | \-o, \-\-outfile | string | output file containing semi\-colon\-separated list of cloned repository paths relative to local working environment |
 
-### Example Usage
+### Examples
 
 **1. List all (accessible) repository HTTPS URLs associated with particular GitHub user:**
 ```
@@ -58,7 +58,7 @@ Obtain commit history information for a set of git repositories in tabular forma
 | \-\-until | string | consider only repository commits performed before a particular date |
 | \-\-since | string | consider only repository commits performed after a particular date |
 
-### Example Usage
+### Examples
 
 **1. Export repository commit information to some data store:**
 ```
@@ -90,7 +90,7 @@ Generate statistical information based on a set of repository commit records. Th
 |----------|------|-------------|
 | \-\-data\-store | string | specify data store object |
 
-### Example Usage
+### Examples
 
 **1. Generate repository statistics for a set of commit records accessible in some data store:**
 ```
