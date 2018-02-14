@@ -103,21 +103,23 @@ $ python analyzer.py --data-store {ds_object}
 
 ## Python Modules:
 - argparse
-- bokeh
+- bokeh*
 - collections
 - datetime
 - getpass
 - io
-- numpy
+- numpy*
 - os
-- pandas
+- pandas*
 - re
-- requests
+- requests*
 - subprocess
 - sys
 - textwrap
 - time
 - urlparse
+
+* May require install
 
 ## Environment Setup:
 - GitHub user account
