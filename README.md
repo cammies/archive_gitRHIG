@@ -123,6 +123,7 @@ $ python analyzer.py --data-store {ds_object}
 - textwrap
 - time
 - urlparse
+- xlwt*
 
 \* May require install
 
