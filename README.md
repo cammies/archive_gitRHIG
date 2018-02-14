@@ -20,7 +20,7 @@ List or batch-retrieve the repositories associated with a particular GitHub user
 | \-\-until | string | process only repositories modified before a particular date |
 | \-\-since | string | process only repositories created after a particular date |
 | \-r, \-\-retrieve | flag | clone repositories |
-| \-a, \-\-anonymize | flag | apply anonymization to cloned repository paths |
+| \-a, \-\-anonymize | flag | apply anonymization on cloned repository paths |
 | \-b, \-\-bare | flag | opt for bare repositories when cloning |
 | \-d, \-\-directory | string | runtime working directory for cloned repositores |
 | \-o, \-\-outfile | string | output file containing semi\-colon\-separated list of cloned repository paths relative to local working environment |
@@ -51,7 +51,7 @@ Obtain commit history information for a set of git repositories in tabular forma
 | argument | type | description |
 |----------|------|-------------|
 | \-s, \-\-sources | string | semi\-colon\-separated list of repository paths \(relative to local working environment\), or an input text file containing the same |
-| \-a, \-\-anonymize | flag | apply anonymization to resulting repository commit records |
+| \-a, \-\-anonymize | flag | apply anonymization on resulting repository commit records |
 | \-\-paths\-in\-repo | string | comma-separated list of paths to process relative to all repositories |
 | \-\-files\-in\-repo | string | comma-separated list of files to process relative to all repositories |
 | \-\-data\-store | string | specify data store object |
