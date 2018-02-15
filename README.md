@@ -27,17 +27,17 @@ List or batch-retrieve the repositories associated with a particular [GitHub](ht
 
 ### Examples
 
-**1. List all (accessible) repository HTTPS URLs associated with particular GitHub user:**
+**1.** List all (accessible) repository HTTPS URLs associated with particular GitHub user:
 ```
 $ python collector.py --host https://github.com -u {user} -p
 ```
 
-**2. Retrieve an anonymized, bare repository:**
+**2.** Retrieve an anonymized, bare repository:
 ```
 $ python collector.py -s https://{github.hostname}/{repository_owner}/{repository_name} -r -a -b
 ```
 
-**3. Retrieve some set of repositories created after Jan. 01, 1970:**
+**3.** Retrieve some set of repositories created after Jan. 01, 1970:
 ```
 $ python collector.py -s {repository_urls_list_file} -r --since 1970-01-01
 ```
@@ -60,22 +60,22 @@ Obtain commit history information for a set of git repositories in tabular forma
 
 ### Examples
 
-**1. Export repository commit information to some data store:**
+**1.** Export repository commit information to some data store:
 ```
 $ python scraper.py -s {relative/path/to/repository} --data-store {ds_object}
 ```
 
-**2. Export repository commit information concerning a specific path and a specific file:**
+**2.** Export repository commit information concerning a specific path and a specific file:
 ```
 $ python scraper.py -s {relative/path/to/repository}{?}{path=path_1}{&}{file=file_1} --data-store {ds_object}
 ```
 
-**3. Export anonymized repository commit information for any commits performed after Jan. 01, 1970:**
+**3.** Export anonymized repository commit information for any commits performed after Jan. 01, 1970:
 ```
 $ python scraper.py -s {relative/path/to/repository} -a --data-store {ds_object} --since 1970-01-01
 ```
 
-**4. Export repository commit information concerning particular paths for some set of repositories:**
+**4.** Export repository commit information concerning particular paths for some set of repositories:
 ```
 $ python scraper.py -s {relative/path/to/repository} --paths-in-repo {path_1, path_2,..., path_n} --data-store {ds_object}
 ```
@@ -92,7 +92,7 @@ Generate statistical information based on a set of repository commit records. Th
 
 ### Examples
 
-**1. Generate repository statistics for a set of commit records accessible in some data store:**
+**1.** Generate repository statistics for a set of commit records accessible in some data store:
 ```
 $ python analyzer.py --data-store {ds_object}
 ```
