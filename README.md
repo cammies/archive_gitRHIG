@@ -124,6 +124,7 @@ $ python analyzer.py --data-store {ds_object}
 - time
 - urlparse
 - [xlwt](https://pypi.python.org/pypi/xlwt)*
+- [openpyxl](https://pypi.python.org/pypi/openpyxl)*
 
 \* May require install
 
