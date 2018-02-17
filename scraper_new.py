@@ -11,7 +11,6 @@ import re; # Regular expressions.
 import subprocess; # Git commands.
 import sys; # Script termination.
 import urlparse; # URL parsing.
-import xlrd; # XLSX format support.
 
 
 # Global variables.
