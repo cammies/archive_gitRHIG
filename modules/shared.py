@@ -43,9 +43,16 @@ def is_url(uri):
 
 # Check if URL refers to a GitHub repository.
 def is_repo_url(url):
+
+    cmd = 'git ls-remote %s' % (url);
+
+    sp = subprocess.Popen(cmd,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE,
+                          shell=True);
     
-    sp = subprocess.Popen(('git ls-remote %s' % (url)), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True);
     sp.communicate();
+    
     if (sp.returncode == 0):
         return True;
     else:
@@ -152,54 +159,10 @@ def get_warning_str(case):
     return warning_str;
 
 
-# Process input file.
-def process_infile(infile):
-    
-    with open(infile, 'r') as sources_file:
-        sources = sources_file.read().replace('\n', '');
-    
-    return sources;
-
-
-# Get repo URI and paths in repo.
-# Example syntax: 'https://github.com/{username}/{reponame}=,{dirname}'.
-def parse_repo_source_str(repo_source_str, process_as_url=True):
-    
-    paths_in_repo = list();
-    files_in_repo = list();
-
-    if (process_as_url):
-        
-        repo_uri = repo_source_str;
-
-    else:
-        
-        parsed_uri = urlparse.urlparse(repo_source_str);
-
-        repo_uri = parsed_uri.path;
-
-        query_dict = urlparse.parse_qs(parsed_uri.query);
-        for field in query_dict: # Fill lists, paths_in_repo and files_in_repo.
-
-            if (field == 'path'):
-                paths_in_repo = query_dict[field];
-            elif (field == 'file'):
-                files_in_repo = query_dict[field];
-            else:
-                print(get_warning_str("No such query field \'" + str(field) + "\'"));
-    
-    repo_source_dict = dict();
-    repo_source_dict['repo_uri'] = repo_uri;
-    repo_source_dict['paths_in_repo'] = paths_in_repo;
-    repo_source_dict['files_in_repo'] = files_in_repo;
-    
-    return repo_source_dict;
-
-
 # Determine if it is okay to overwrite existing file. 
-def can_overwrite_file(outfile):
+def can_overwrite_file(dest):
     
-    answer = raw_input("File \'" + outfile + "\' already exists! Overwrite? [y/N] ");
+    answer = raw_input("File \'" + dest + "\' already exists! Overwrite? [y/N] ");
     if (answer == 'y'):
         return True;
     else:
@@ -207,28 +170,29 @@ def can_overwrite_file(outfile):
 
 
 # Check if outfile is writable.
-def verify_outfile(outfile):
+def is_writable_file(dest):
     
-    # Case: Outfile exists.
-    if (os.path.exists(outfile)): # File already exists...
+    # Case: Destination already exists.
+    if (os.path.exists(dest)):
         
-        if (not can_overwrite_file(outfile)):
+        if (not can_overwrite_file(dest)):
             print("Not overwriting.");
             return False;
     
-    # Case: Outfile path does not exist.
-    path_to_outfile = os.path.dirname(outfile); # Get outfile path.
-    if (path_to_outfile): # (Outfile contained a path)...
+    # Case: Destination path does not exist.
+    path_to_dest = os.path.dirname(dest); # Get destination path.
+    if (path_to_dest): # If destination string contained a path...
         
-        if (not os.path.isdir(path_to_outfile)): # Path does not exist...
-            path_to_outfile = os.path.abspath(path_to_outfile); # Get absolute path.
-            print("No such directory \'" + path_to_outfile + "\'");
+        if (not os.path.isdir(path_to_dest)): # Path does not exist...
+            abspath_to_dest = os.path.abspath(path_to_dest); # Get absolute path.
+            print("No such directory \'" + abspath_to_dest + "\'.");
             return False;
     
-    # Case: Outfile is a directory.
-    if (os.path.isdir(outfile) or outfile.endswith('/')): # Outfile is a directory (existing or not existing)...
-        abs_path_to_outfile = os.path.abspath(outfile);
-        print("Output \'" + abs_path_to_outfile + "\' is not a file.");
+    # Case: Destination is a directory.
+    if (os.path.isdir(dest) or dest.endswith('/')): # Destination is a directory (existing or not existing)...
+        
+        abspath_to_dest = os.path.abspath(dest);
+        print("Not a file \'" + abspath_to_dest + "\'.");
         return False;
     
     return True;
@@ -293,86 +257,36 @@ def make_ascii_str2(text):
     return ascii_text;
 
 
-# Clone repository or just fetch its latest changes.
-def update_local_repo(repo_url, directory):
-    
-    url_path = urlparse.urlparse(repo_url)[2];
-    repo_owner = os.path.basename(os.path.abspath(os.path.join(url_path, os.pardir))); # Get name of parent directory in path.
-    repo_name = os.path.basename(url_path);
-    
-    path_to_repo = add_path_to_uri(repo_owner, repo_name);
-    abspath_to_repo = add_path_to_uri(directory, path_to_repo);
-    
-    clone_repo = False;
-    if (not os.path.exists(abspath_to_repo)): # Local path to repo does not exist...
-        os.makedirs(abspath_to_repo);
-        clone_repo = True;
-    elif (not is_repo_root(abspath_to_repo)): # Local path to repo is not a repo directory...
-        clone_repo = True;
-    
-    if (clone_repo): # Clone repo...
-        
-        print("Cloning repo...");
-        
-        repo_ssh_url = build_repo_ssh_url(repo_url);
-        
-        sp = subprocess.Popen(('git clone %s \'%s\'' % (repo_ssh_url, abspath_to_repo)), stdout=subprocess.PIPE, shell=True);
-        sp.wait();
-        
-    else: # ...Or just update existing repo...
-        
-        print("Updating repo...");
-        
-        gd = '--git-dir=\'' + abspath_to_repo + '/.git/\'';
-        wt = '--work-tree=\'' + abspath_to_repo + '\'';
-        h = '--hard HEAD';
-        x = '-xffd';
-        
-        sp = subprocess.Popen(('git %s %s reset %s' % (gd,wt,h)), stdout=FNULL, stderr=FNULL, shell=True);
-        sp.wait();
-        sp = subprocess.Popen(('git %s %s clean %s' % (gd,wt,x)), stdout=FNULL, stderr=FNULL, shell=True);
-        sp.wait();
-        sp = subprocess.Popen(('git %s %s pull' % (gd,wt)), stdout=FNULL, stderr=FNULL, shell=True);
-        sp.wait();
-    
-    print("Done.");
-    print("Repo is at latest version.");
-    
-    return abspath_to_repo, repo_owner, repo_name;
-
-
 # Formulate since-datetime str.
-def verify_since_str(since):
+def get_since_dt_str(since_dt_str):
     
-    since_str = '';
-    if (since):
+    if (since_dt_str):
         try:
             dt = dtparser.parse(since)
-            since_str = datetime.datetime.strftime(dt, '%Y-%m-%dT%H:%M:%SZ')
+            since_dt_str = datetime.datetime.strftime(dt, '%Y-%m-%dT%H:%M:%SZ')
         except:
             print(get_warning_str("Malformed since date \'" + since + "\'"));
-            since_str = get_utc_begin_str();
+            since_dt_str = get_utc_begin_str();
     else:
-        since_str = get_utc_begin_str();
+        since_dt_str = get_utc_begin_str();
     
-    return since_str;
+    return since_dt_str;
 
 
 # Formulate until-datetime str.
-def verify_until_str(until):
+def get_until_dt_str(until_dt_str):
     
-    until_str = '';
-    if (until):
+    if (until_dt_str):
         try:
             dt = dtparser.parse(until)
-            until_str = datetime.datetime.strftime(dt, '%Y-%m-%dT%H:%M:%SZ')
+            until_dt_str = datetime.datetime.strftime(dt, '%Y-%m-%dT%H:%M:%SZ')
         except:
             print(get_warning_str("Malformed until date \'" + until + "\'"));
-            until_str = get_utc_now_str();
+            until_dt_str = get_utc_now_str();
     else:
-        until_str = get_utc_now_str();
+        until_dt_str = get_utc_now_str();
     
-    return until_str;
+    return until_dt_str;
 
 
 # Filenames considered when processing each repo.
@@ -387,20 +301,19 @@ def verify_considered_files(files_in_repo_str):
 
 
 # Paths in repo considered when processing each repo.
-def verify_paths_in_repo(paths_in_repo_str):
+def get_paths_in_repo(paths_in_repo_str):
     
     paths_in_repo = list();
     if (paths_in_repo_str):
-        paths_in_repo = split_str('&', paths_in_repo_str);
+        paths_in_repo = split_str(';', paths_in_repo_str);
         paths_in_repo = list(set(paths_in_repo)); # Eliminate any duplicates.
     
     return paths_in_repo;
 
 
 # Verify working directory for runtime storage processing.
-def verify_directory(directory_str):
+def get_directory(directory_str):
     
-    directory = '';
     if (directory_str):
         if (not os.path.exists(directory_str)): # If directory does not exists, make it.
             os.makedirs(directory_str);
@@ -411,19 +324,128 @@ def verify_directory(directory_str):
     return directory;
 
 
-# Verify repo sources (URIs and corresponding paths).
-def verify_repo_sources(sources_str, include_urls=True, include_local_paths=True):
+# Get repo URI and paths in repo.
+# Example syntax: 'https://github.com/{username}/{reponame}=,{dirname}'.
+def parse_source(source_str):
     
+    source = dict();
+    
+    paths_in_repo = list();
+
+    try:
+        
+        parsed_uri = urlparse.urlparse(source_str);
+
+        repo_uri = parsed_uri.path;
+
+        query_dict = urlparse.parse_qs(parsed_uri.query);
+        for field in query_dict: # Populate paths_in_repo.
+
+            if (field == 'path'):
+                paths_in_repo = query_dict[field];
+            else:
+                print(get_warning_str("No such query field \'" + str(field) + "\'"));
+        
+        source['repo_uri'] = repo_uri;
+        source['paths_in_repo'] = paths_in_repo;
+    
+    except:
+        source['repo_uri'] = '';
+    
+    return source;
+
+
+# Process input file.
+def process_infile(infile):
+    
+    with open(infile, 'r') as sources_file:
+        sources = sources_file.read().replace('\n', '');
+    
+    return sources;
+
+
+#
+def get_sources(sources_str):
+
+    raw_sources = split_str(';', sources_str); # Multiple URIs are semi-colon separated.
+    raw_sources = list(set(raw_sources)); # Eliminate any duplicates.
+    
+    sources = list();
+    for source in raw_sources:
+        
+        if (os.path.isfile(source)): # If source is a file...
+            file_sources_str = process_infile(source);
+            sources_from_file = get_sources(file_sources_str);
+            sources = sources + sources_from_file;
+        else:
+            sources.append(source);
+
+    return sources;
+
+
+#
+def get_repo_local_paths(sources_str):
+    
+    sources = get_sources(sources_str);
+
+    repo_local_paths = list();
+    for source in sources:
+
+        source_dict = parse_source(source);
+        
+        uri = source_dict['repo_uri'];
+        if (is_local_path(uri)):
+                    
+            if (is_repo_root(uri)):
+                
+                if (source_dict not in repo_local_paths):
+                    repo_local_paths.append(source_dict);
+            else:
+                print(get_warning_str("\'" + uri + "\' does not refer to a git repository"));
+            
+        else:
+            print(get_warning_str("Malformed URI \'" + uri + "\'"));
+
+    return repo_local_paths;
+                
+
+#
+def get_repo_urls(sources_str):
+    
+    sources = get_sources(sources_str);
+
+    repo_urls = list();
+    for source in sources:
+
+        if (is_url(source)):
+            
+            if (is_repo_url(build_repo_ssh_url(source))):
+                
+                if (source not in repo_urls):
+                    repo_urls.append(source);
+            else:
+                print(get_warning_str("\'" + source + "\' does not refer to a GitHub repository"));
+            
+        else:
+            print(get_warning_str("Malformed URI \'" + uri + "\'"));
+
+    return repo_urls;
+                
+
+# Verify repo sources (URIs and corresponding paths).
+def get_repo_sources(sources_str, include_urls=True, include_local_paths=True):
+    
+    #sources = get_sources(sources_str):
+
     if (sources_str):
         
-        sources = split_str(';', sources_str); # Multiple URIs are separated by semi-colons.
+        sources = split_str(';', sources_str); # Multiple URIs are semi-colon separated.
         sources = list(set(sources)); # Eliminate any duplicates.
         
         valid_repos = list();
         for source in sources:
             
-            sources_str = '';
-            if (os.path.isfile(source)): # If input is file...
+            if (os.path.isfile(source)): # If source is a file...
                 sources_str = process_infile(source);
             else:
                 sources_str = source;
@@ -467,45 +489,40 @@ def verify_repo_sources(sources_str, include_urls=True, include_local_paths=True
 
 
 # Write DataFrame to file.
-def write_df_to_file(df, title, outfile):
+def write_df_to_file(df, title, destination):
     
-    df_writer = pandas.ExcelWriter(outfile);
+    df_writer = pandas.ExcelWriter(destination, engine='xlsxwriter');
     df.to_excel(df_writer, title, index=False);
     df_writer.save();
 
 
-# Write DataFrame to file.
-def write_df_to_csv(df, outfile):
+# Get data store DataFrame.
+def load_commits_data_store(data_store):
     
-    #df_writer = pandas.ExcelWriter(outfile);
-    df.to_csv(outfile);
-    #df_writer.save();
-
-
-# Load data store from spreadsheet file.
-def load_commit_info_data_store(data_store):
-    
-    try:
-        ds_xls = pandas.ExcelFile(data_store); # Load spreadsheet file.
-        ds_df = ds_xls.parse(); # Import spreadsheet file to DataFrame.
-        #ds_df = pandas.read_html(data_store);
-    except:
-        return None;
-    
-    COLUMN_LABELS = ['repo_owner', 'repo_name', 'path_in_repo',
+    COLUMN_LABELS = ['repo_owner', 'repo_name',
+                     'path_in_repo',
+                     'tags',
                      'commit_hash',
                      'author_name', 'author_email', 'author_epoch',
                      'committer_name', 'committer_email', 'committer_epoch',
                      'subject',
                      'num_files_changed',
                      'num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
-    
-    for column_label in COLUMN_LABELS:
+
+    try:
         
-        if (column_label not in ds_df.columns):
-            return None;
+        ds_xlsx = pandas.ExcelFile(data_store); # Load data store.
+        ds_df = ds_xlsx.parse(); # Import data store to DataFrame.
+        
+        for column_label in COLUMN_LABELS: # Ensure each column name in DataFrame is what is expected in commits data store...
+            
+            if (column_label not in ds_df.columns):
+                return None;
+        
+        return ds_df;
     
-    return ds_df;
+    except:
+        return None;
 
 
 # Load data store from spreadsheet file.
