@@ -93,11 +93,11 @@ def echo_args():
     #arg_files_in_repo = ', '.join(["\'" + f + "\'" for f in args.files_in_repo]) if (args.files_in_repo) else "\'*\'";
     
     print("ANONYMIZE: " + str(args.anonymize));
-    print("DATA_STORE: " + str(args.data_store));
-    print("PATHS_IN_ALL_REPOS: " + str(arg_paths_in_repo));
+    print("DATA_STORE: " + args.data_store);
+    print("PATHS_IN_ALL_REPOS: " + arg_paths_in_repo);
     #print("ALL_REPOS_FILES: " + str(arg_files_in_repo));
-    print("SINCE: " + str(args.since));
-    print("UNTIL: " + str(args.until));
+    print("SINCE: " + args.since);
+    print("UNTIL: " + args.until);
 
 
 # Extract repo owner and name from remote origin URL.
@@ -254,9 +254,7 @@ def get_commit_changes(commit):
     
 
 # Parse project commit info.
-def parse_gitlog_str(gitlog_str):
-    
-    global path_to_repo;
+def process_commit_history(gitlog_str):
     
     # Initial commit field names.
     COMMIT_FIELDS = ['commit_hash',
@@ -274,7 +272,7 @@ def parse_gitlog_str(gitlog_str):
     commit_count = len(commits);
     for i in range(0, commit_count):
 
-        print("Processing commit " + str(i+1) + " of " + str(commit_count));
+        print("> Processing commit " + str(i+1) + " of " + str(commit_count));
         
         commit = commits[i];
 
@@ -307,7 +305,7 @@ def parse_gitlog_str(gitlog_str):
 
 # Get commits info as list of dicts, each dict representing a single commit.
 # Inspired by a blog post by Steven Kryskalla: http://blog.lost-theory.org/post/how-to-parse-git-log-output/
-def process_commits_info():
+def get_commits():
     
     global path_to_repo;
     global path_in_repo;
@@ -318,16 +316,16 @@ def process_commits_info():
                      '%cn', '%ce', '%ct',
                      '%s'];
     
-    gitlog_format = '%x1e' + '%x1f'.join(GITLOG_FIELDS) + '%x1f'; # Last '%x1f' accounts for files info string.
+    gitlog_format = '%x1e' + '%x1f'.join(GITLOG_FIELDS) + '%x1f'; # Last '%x1f' accounts for files info field string.
     
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
     wt = '--work-tree=\'' + path_to_repo + '\'';
-    a = '--since=' + str(args.since);
-    b = '--until=' + str(args.until);
+    a = '--since=' + args.since;
+    b = '--until=' + args.until;
     s = '--stat';
     stat_width = 1000; # Length of git-log output. (Using insanely-high value to ensure "long" filenames are captured in their entirety.)
     sw = '--stat-width=' + str(stat_width);
-    f = '--format=' + str(gitlog_format);
+    f = '--format=' + gitlog_format;
     p = '\'' + sh.add_path_to_uri(path_to_repo, path_in_repo) + '\'';
     
     cmd_str = 'git %s %s log %s %s %s %s %s %s' % (gd,wt,a,b,s,sw,f,p);
@@ -341,22 +339,8 @@ def process_commits_info():
     (gitlog_str, _) = sp.communicate();
     
     if (gitlog_str):
-        commits = parse_gitlog_str(gitlog_str);
+        commits = process_commit_history(gitlog_str);
         return commits;
-    else:
-        return list();
-
-
-# Fetch project commits info.
-def get_commits():
-    
-    global path_to_repo;
-    global path_in_repo;
-    
-    path_to_path_in_repo = sh.add_path_to_uri(path_to_repo, path_in_repo);
-    
-    if (sh.is_local_path(path_to_path_in_repo)):
-        return process_commits_info();
     else:
         return list();
 
@@ -436,9 +420,9 @@ def process_project():
 
         commits_df = construct_commits_df(commits);
         
-        print("Importing " + str(len(commits)) + " commit records into data store...");
+        print("Importing " + str(len(commits)) + " commit records into data store:");
         push_commit_records(commits_df, 'commits', args.data_store);
-        print("Done.");
+        print("> Done");
         
         return True;    
 
@@ -451,6 +435,11 @@ def process_project():
 def main():
     
     global args;
+    global path_to_repo;
+    global repo_owner;
+    global repo_name;
+    global path_in_repo;
+    global tags;
 
     print('');
     args = process_args();
@@ -466,19 +455,13 @@ def main():
     num_repos = len(args.sources);
     for i in range(0, num_repos):
         
-        global path_to_repo;
-        global repo_owner;
-        global repo_name;
-        global path_in_repo;
-
         print("Processing repository " + str(i+1) + " of " + str(num_repos));
         
         source = args.sources[i];
         
-        repo_local_path = source['repo_uri'];
-        print("LOCAL_PATH: " + repo_local_path);
-        
-        path_to_repo = os.path.abspath(repo_local_path);
+        path_to_repo = source['repo_uri'];
+        print("LOCAL_PATH: " + path_to_repo);
+        path_to_repo = os.path.abspath(path_to_repo);
         
         remote_origin_url = sh.get_remote_origin_url(path_to_repo);
         repo_owner, repo_name = extract_repo_owner_and_name(remote_origin_url);
@@ -486,12 +469,10 @@ def main():
             repo_owner = sh.get_hash_str(repo_owner);
             repo_name = sh.get_hash_str(repo_name);
 
-        paths = source['paths_in_repo'] if source['paths_in_repo'] else list();
-        paths = paths + args.paths_in_repo;
+        paths = args.paths_in_repo + source['paths_in_repo'];
         paths = list(set(paths)); # Eliminate any duplicates.
         paths = paths if paths else ['.'];
         
-        global tags;
         tags = args.tags;
         
         num_paths = len(paths);
@@ -500,12 +481,11 @@ def main():
             path_in_repo = paths[j];
             print("Processing path " + str(j+1) + " of " + str(num_paths));
             print("PATH: \'" + path_in_repo + "\'");
-            print("Scraping repository history...");
+            print("Scraping repository history:");
             proc_start_time = datetime.datetime.now();
             process_project();
             proc_end_time = datetime.datetime.now();
             proc_elapsed_time = proc_end_time - proc_start_time;
-            print("Finished processing repository.");
             print("Processing Time: " + str(proc_elapsed_time));
         
         print('');
@@ -513,7 +493,7 @@ def main():
     end = datetime.datetime.now();
     elapsed_time = end - start;
     print("Execution Time: " + str(elapsed_time));
-    print("Completed.");
+    print("Execution Completed.");
 
     return;
 
