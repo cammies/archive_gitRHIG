@@ -11,13 +11,14 @@ import re; # Regular expressions.
 import subprocess; # Git commands.
 import sys; # Script termination.
 import urlparse; # URL parsing.
+import xlrd; # XLSX format support.
 
 
 # Global variables.
 
 args = ''; # For script arguments object.
 
-ds_df = ''; # Data store DataFrame.
+ds_df = None; # Data store DataFrame.
 
 repo_owner = ''; # Identifier for repository owner.
 repo_name = ''; # Identifier for repository name.
@@ -36,7 +37,7 @@ def process_args():
     
     argparser.add_argument('-s','--sources', help="path to repository (relative to local working environment)", type=str);
     argparser.add_argument('-a','--anonymize', help="enforce anonymization on output commit records", action="store_true");
-    argparser.add_argument('--data-store', help="destination data store for commit records", type=str);
+    argparser.add_argument('--data-store', help="destination data store (XLSX file) for commit records", type=str);
     argparser.add_argument('--paths-in-repo', help="comma-separated string of repository subdirectories to process", type=str);
     argparser.add_argument('--tags', help="label commit records", type=str);
     argparser.add_argument('--since', help="scrape information about commits more recent than a specific date", type=str);
@@ -51,24 +52,30 @@ def check_args():
     global ds_df;
     
     # Repo sources (URIs and corresponding paths).
-    if (not args.sources):
-        sys.exit("Must provide at least one valid repository URI.");
-    args.sources = sh.get_repo_local_paths(args.sources)
+    if (args.sources):
+        args.sources = sh.get_repo_local_paths(args.sources)
     if (not args.sources):
         sys.exit("Must provide at least one valid repository URI.");
     
     # Output file.
     if (args.data_store):
-
-        ds_df = load_commits_data_store(args.data_store);
+       
+        data_store = args.data_store;
+        if (sh.is_writable_file(data_store)): # If destination data store is cleared for writing...
+            
+            if (os.path.exists(data_store)): # If destination data store already exists, check its structure...
+                
+                ds_df = sh.load_commits_data_store(data_store);
+                if (ds_df is None):
+                    sys.exit("Malformed data store \'" + data_store + "\'.");
+            
+            args.data_store = os.path.abspath(data_store);
         
-        if (ds_df is not None):
-            args.data_store = os.path.abspath(args.data_store);
         else:
-            sys.exit("Malformed data store \'" + args.data_store + "\'.");
-    
+            sys.exit();
+
     else: # Default output data store destination
-        args.data_store = 'scraper-data_store-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3] + '.xls';
+        args.data_store = 'scraper-data_store-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3] + '.xlsx';
     
     # Paths in repo.
     args.paths_in_repo = sh.get_paths_in_repo(args.paths_in_repo);
@@ -279,7 +286,7 @@ def parse_gitlog_str(gitlog_str):
         commit['committer_email'] = sh.make_ascii_str(commit['committer_email']);
         commit['committer_epoch'] = float(commit['committer_epoch']);
         commit['subject'] = sh.make_ascii_str(commit['subject']);
-        commit['subject_length'] = len(commit['subject']);
+        commit['len_subject'] = len(commit['subject']);
         
         if (args.anonymize):
             commit['author_name'] = sh.get_hash_str(commit['author_name']);
@@ -372,7 +379,7 @@ def construct_commits_df(commits):
                      'commit_hash',
                      'author_name', 'author_email', 'author_epoch',
                      'committer_name', 'committer_email', 'committer_epoch',
-                     'subject', 'subject_length',
+                     'subject', 'len_subject',
                      'num_files_changed',
                      'num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
     
@@ -395,7 +402,7 @@ def construct_commits_df(commits):
         row['committer_email'] = commit['committer_email'];
         row['committer_epoch'] = commit['committer_epoch'];
         row['subject'] = commit['subject'];
-        row['subject_length'] = commit['subject_length'];
+        row['len_subject'] = commit['len_subject'];
         row['num_files_changed'] = commit['num_files_changed'];
         row['num_lines_changed'] = commit['num_lines_changed'];
         row['num_lines_inserted'] = commit['num_lines_inserted'];
@@ -410,9 +417,9 @@ def push_commit_records(commits_df, title, destination):
     
     global ds_df;
 
-    if (ds_df): # If destination already exists...
+    if (ds_df is not None): # If destination already exists...
         ds_df = pandas.concat([ds_df, commits_df]); # Concatenate existing commits DataFrame (from data store) with commits DataFrame.
-        ds_df = df.drop_duplicates().reset_index(drop=True); # Eliminate any duplicate DataFrame rows.
+        ds_df = ds_df.drop_duplicates().reset_index(drop=True); # Eliminate any duplicate DataFrame rows.
     else:
         ds_df = commits_df;
 
@@ -445,11 +452,10 @@ def process_project():
 def main():
     
     global args;
-    
-    args = process_args();
+
     print('');
-    
-    print("Checking script arguments...");
+    args = process_args();
+    print("Checking arguments...");
     check_args();
     print("Done.");
     print('');
@@ -471,7 +477,7 @@ def main():
         source = args.sources[i];
         
         repo_local_path = source['repo_uri'];
-        print("LOCATION: " + repo_local_path);
+        print("LOCAL_PATH: " + repo_local_path);
         
         path_to_repo = os.path.abspath(repo_local_path);
         
@@ -495,19 +501,19 @@ def main():
             path_in_repo = paths[j];
             print("Processing path " + str(j+1) + " of " + str(num_paths));
             print("PATH: \'" + path_in_repo + "\'");
-            print('Accumulating repository info...');
+            print("Scraping repository history...");
             proc_start_time = datetime.datetime.now();
             process_project();
             proc_end_time = datetime.datetime.now();
             proc_elapsed_time = proc_end_time - proc_start_time;
-            print("ELAPSED_TIME: " + str(proc_elapsed_time));
-            print('Done.');
+            print("Finished processing repository.");
+            print("Processing Time: " + str(proc_elapsed_time));
         
         print('');
     
     end = datetime.datetime.now();
     elapsed_time = end - start;
-    print("TOTAL_ELAPSED_TIME: " + str(elapsed_time));
+    print("Execution Time: " + str(elapsed_time));
     print("Completed.");
 
     return;
