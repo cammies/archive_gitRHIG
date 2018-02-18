@@ -17,10 +17,13 @@ import urlparse; # URL parsing.
 
 args = ''; # For script arguments object.
 
-repo_owner = '';
-repo_name = '';
-path_in_repo = '';
-path_to_repo = '';
+repo_owner = ''; # Identifier for repository owner.
+repo_name = ''; # Identifier for repository name.
+path_in_repo = ''; # Path in repository commit log refers to.
+
+tag = ''; # Commit label.
+
+path_to_repo = ''; # Local environment path to repository.
 
 include_paths = list(); # Repo paths to process.
 exclude_paths = list(); # Repo paths to ignore.
@@ -491,6 +494,7 @@ def make_commit_record_df(commits):
     
     COLUMN_LABELS = ['repo_owner', 'repo_name',
                      'path_in_repo',
+                     'tags',
                      'commit_hash',
                      'author_name', 'author_email', 'author_epoch',
                      'committer_name', 'committer_email', 'committer_epoch',
@@ -505,6 +509,7 @@ def make_commit_record_df(commits):
         row['repo_owner'] = repo_owner;
         row['repo_name'] = repo_name;
         row['path_in_repo'] = path_in_repo;
+        row['tags'] = tags;
         commit = commits[index];
         row['commit_hash'] = commit['commit_hash'];
         row['author_name'] = commit['author_name'];
@@ -550,6 +555,50 @@ def process_project():
         return;
 
 
+#
+def get_included_paths(paths):
+
+    included_paths = list();
+    for path in paths:
+        if (not path.startswith('!')):
+            included_paths.append(path);
+
+    return included_paths;
+
+
+#
+def process_paths(paths):
+
+    include = list();
+    exclude = list();
+    for p in paths:
+        if (not p.startswith('!')): # If path does not start with '!' char...
+            include.append(p);
+        else:
+            p = p[1:]); # Remove leading '!' char.
+            exclude.append(p);
+
+    if (not include): # If still empty...
+        include.append('.'); # Signify repo root.
+
+    return include, exclude;
+
+
+#
+def process_files(filenames):
+
+    include = list();
+    exclude = list();
+    for f in filenames:
+        if (not f.startswith('!')): # If filename does not start with '!' char...
+            include.append(f);
+        else:
+            f = f[1:]; # Remove leading '!' char.
+            exclude.append(f); # (Remove leading '!' char).
+
+    return include, exclude;
+
+
 # Driver for scraper.
 def main():
     
@@ -569,6 +618,10 @@ def main():
         global path_to_repo;
         global repo_owner;
         global repo_name;
+        global include_paths;
+        global exclude_paths;
+        global include_files;
+        global exclude_files;
 
         rs_dict = args.sources[i];
         
@@ -585,36 +638,21 @@ def main():
             repo_owner = sh.get_hash_str(repo_owner);
             repo_name = sh.get_hash_str(repo_name);
         
-        paths_in_rs_dict = rs_dict['paths_in_repo'] if rs_dict['paths_in_repo'] else list();
-        paths_in_repo = paths_in_rs_dict + args.paths_in_repo;
-        paths_in_repo = list(set(paths_in_repo));
-        global include_paths;
-        global exclude_paths;
-        include_paths = list();
-        exclude_paths = list();
-        for p in paths_in_repo:
-            if (p.startswith('!')):
-                exclude_paths.append(p[1:]);
-            else:
-                include_paths.append(p);
-        if (not include_paths):
-            include_paths.append('.');
+        paths = rs_dict['paths_in_repo'] if rs_dict['paths_in_repo'] else list();
+        paths = paths + args.paths_in_repo;
+        paths = list(set(paths));
+        include_paths, exclude_paths = process_paths(paths):
 
-        files_in_repo = args.files_in_repo + rs_dict['files_in_repo'];
-        files_in_repo = list(set(files_in_repo));
-        global include_files;
-        global exclude_files;
-        include_files = list();
-        exclude_files = list();
-        for f in files_in_repo:
-            if (f.startswith('!')):
-                exclude_files.append(f[1:]);
-            else:
-                include_files.append(f);
+        files = args.files_in_repo + rs_dict['files_in_repo'];
+        files = list(set(files));
+        include_paths, exclude_paths = process_files(files):
 
-        not_paths_in_repo_str = ', '.join(["\'" + p + "\'" for p in exclude_paths]) if (exclude_paths) else "\'\'";
-        files_in_repo_str = ', '.join(["\'" + f + "\'" for f in include_files]) if (include_files) else "\'*\'";
-        not_files_in_repo_str = ', '.join(["\'" + f + "\'" for f in exclude_files]) if (exclude_files) else "\'\'";
+        not_paths_str = ', '.join(["\'" + p + "\'" for p in exclude_paths]) if (exclude_paths) else "\'\'";
+        files_str = ', '.join(["\'" + f + "\'" for f in include_files]) if (include_files) else "\'*\'";
+        not_files_str = ', '.join(["\'" + f + "\'" for f in exclude_files]) if (exclude_files) else "\'\'";
+
+        global tags;
+        tags = args.tags;
         
         num_paths = len(include_paths);
         for j in range(0, num_paths): # For each path in repo...
@@ -623,9 +661,9 @@ def main():
             path_in_repo = include_paths[j];
             print("Processing path " + str(j+1) + " of " + str(num_paths) + "...");
             print("PATH: \'" + path_in_repo + "\'");
-            print("IGNORE_PATHS: " + not_paths_in_repo_str + "");
-            print("FILES: " + files_in_repo_str);
-            print("IGNORE_FILES: " + not_files_in_repo_str);
+            print("IGNORE_PATHS: " + not_paths_str + "");
+            print("FILES: " + files_str);
+            print("IGNORE_FILES: " + not_files_str);
             print('Accumulating project info...');
             proc_start_time = datetime.datetime.now();
             process_project();
