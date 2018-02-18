@@ -52,7 +52,7 @@ def check_args():
     
     # Repo sources (URIs and corresponding paths).
     if (args.sources):
-        args.sources = sh.get_repo_local_paths(args.sources)
+        args.sources = sh.get_repo_local_paths(args.sources);
     if (not args.sources):
         sys.exit("Must provide at least one valid repository URI.");
     

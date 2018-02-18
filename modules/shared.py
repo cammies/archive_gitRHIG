@@ -11,10 +11,6 @@ import urlparse; # URI parsing.
 import requests; # HTTP requests.
 
 
-# # Alias for '/dev/null'.
-FNULL = open(os.devnull, 'w');
-
-
 # Update basepath in URI path.
 def add_path_to_uri(uri, path):
     
@@ -44,11 +40,12 @@ def is_url(uri):
 # Check if URL refers to a GitHub repository.
 def is_repo_url(url):
 
-    cmd = 'git ls-remote %s' % (url);
+    cmd_str = 'git ls-remote %s' % (url);
+    #print(cmd_str);
 
-    sp = subprocess.Popen(cmd,
+    sp = subprocess.Popen(cmd_str,
                           stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
                           shell=True);
     
     sp.communicate();
@@ -74,11 +71,18 @@ def is_corrupt_repo(path_to_repo):
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
     wt = '--work-tree=\'' + path_to_repo + '\'';
     
-    sp = subprocess.Popen(('git %s %s log' % (gd,wt)), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True);
-    (log_str, _) = sp.communicate();
+    cmd_str = 'git %s %s log' % (gd,wt);
+    #print(cmd_str);
     
-    if (log_str == "fatal: bad default revision \'HEAD\'\n" or
-        log_str == "fatal: your current branch \'master\' does not have any commits yet\n"):
+    sp = subprocess.Popen(cmd_str,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          shell=True);
+    
+    (gitlog_str, _) = sp.communicate();
+    
+    if (gitlog_str == "fatal: bad default revision \'HEAD\'\n" or
+        gitlog_str == "fatal: your current branch \'master\' does not have any commits yet\n"):
         return True;
     else:
         return False;
@@ -216,7 +220,15 @@ def get_remote_origin_url(path_to_repo):
     wt = '--work-tree=\'' + path_to_repo + '\'';
     
     wd = '--word-diff';
-    sp = subprocess.Popen(('git %s %s config --get remote.origin.url' % (gd,wt)), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True);
+    
+    cmd_str = 'git %s %s config --get remote.origin.url' % (gd,wt);
+    #print(cmd_str);
+    
+    sp = subprocess.Popen(cmd_str,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          shell=True);
+    
     (remote_origin_url, _) = sp.communicate();
     
     remote_origin_url = remote_origin_url.strip('\n'); # Remove newline '\n'.
@@ -312,7 +324,7 @@ def get_paths_in_repo(paths_in_repo_str):
 
 
 # Verify working directory for runtime storage processing.
-def get_directory(directory_str):
+def get_wd(directory_str):
     
     if (directory_str):
         if (not os.path.exists(directory_str)): # If directory does not exists, make it.
@@ -431,62 +443,6 @@ def get_repo_urls(sources_str):
 
     return repo_urls;
                 
-
-# Verify repo sources (URIs and corresponding paths).
-def get_repo_sources(sources_str, include_urls=True, include_local_paths=True):
-    
-    #sources = get_sources(sources_str):
-
-    if (sources_str):
-        
-        sources = split_str(';', sources_str); # Multiple URIs are semi-colon separated.
-        sources = list(set(sources)); # Eliminate any duplicates.
-        
-        valid_repos = list();
-        for source in sources:
-            
-            if (os.path.isfile(source)): # If source is a file...
-                sources_str = process_infile(source);
-            else:
-                sources_str = source;
-            
-            sources = split_str(';', sources_str); # Multiple URIs are separated by semi-colons.
-            sources = list(set(sources)); # Eliminate any duplicates.
-            for source_str in sources:
-                
-                source_dict = parse_repo_source_str(source_str, include_urls);
-                uri = source_dict['repo_uri'];
-                
-                if (is_url(uri)):
-
-                    if (include_urls):
-                        potential_repo_ssh_url = build_repo_ssh_url(uri);
-                        if (is_repo_url(potential_repo_ssh_url)):
-                            if (uri not in valid_repos):
-                                valid_repos.append(uri);
-                        else:
-                            print(get_warning_str("\'" + uri + "\' does not refer to a git repository"));
-                    else:
-                        print(get_warning_str("Malformed URI \'" + uri + "\'"));
-                
-                elif (is_local_path(uri)):
-
-                    if (include_local_paths):
-                        if (is_repo_root(uri)):
-                            if (source_dict not in valid_repos):
-                                valid_repos.append(source_dict);
-                        else:
-                            print(get_warning_str("\'" + uri + "\' does not refer to a git repository"));
-                    else:
-                        print(get_warning_str("Malformed URI \'" + uri + "\'"));
-                
-                else:
-                    print(get_warning_str("Malformed URI \'" + uri + "\'"));
-            
-        return valid_repos;
-    else:
-        return list();
-
 
 # Write DataFrame to file.
 def write_df_to_file(df, title, destination):

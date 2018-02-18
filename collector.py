@@ -18,8 +18,6 @@ import urlparse; # URL parsing
 
 # Global variables.
 
-FNULL = open(os.devnull, 'w'); # Alias for '/dev/null'.
-
 args = ''; # For script arguments object.
 
 session = requests.Session(); # Session (used to make authenticated GitHub web requests.
@@ -226,25 +224,25 @@ def check_args():
         sys.exit();
     
     # Repo sources (URIs and corresponding paths).
-    args.sources = sh.verify_repo_sources(args.sources, True, False);
+    args.sources = sh.get_repo_urls(args.sources);
     
     # Working directory.
-    args.directory = sh.verify_directory(args.directory);
+    args.directory = sh.get_wd(args.directory);
     
     # Output file.
     if (args.outfile):
-        if (not sh.verify_outfile(args.outfile)):
+        if (not sh.is_writable_file(args.outfile)):
             sys.exit();
-    else: # Default output filename...
-        args.outfile = 'collected-repo-local-paths_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3] + '.txt';
+    #else: # Default output filename...
+    #    args.outfile = 'collected-repo-local-paths_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3] + '.txt';
 
     #args.query = (args.query).split();
     
     # 'Since' date.
-    args.since = sh.verify_since_str(args.since);
+    args.since = sh.get_since_dt_str(args.since);
     
     # 'Until' date.
-    args.until = sh.verify_until_str(args.until);
+    args.until = sh.get_until_dt_str(args.until);
 
 
 # Print script argument configurations.
@@ -345,14 +343,17 @@ def is_bare_repo(path_to_repo):
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
     ibr = '--is-bare-repository';
 
-    sp = subprocess.Popen(('git %s rev-parse %s' % (gd,ibr)),
+    cmd_str = 'git %s rev-parse %s' % (gd,ibr);
+    #print(cmd_str);
+
+    sp = subprocess.Popen(cmd_str,
                           stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
                           shell=True);
     
-    (bool_val, _) = sp.communicate();
-    bool_val = bool_val.strip();
-
+    (gitrevparse_str, _) = sp.communicate();
+    
+    bool_val = gitrevparse_str.strip();
     if (bool_val == 'true'):
         return True;
     else:
@@ -387,19 +388,31 @@ def update_local_repo(repo_url):
         print("Cloning repo...");
         
         if (args.bare):
+            
             b = '--bare';
             p = '\'' + abspath_to_repo + '/.git/\'';
 
-            sp = subprocess.Popen(('git clone %s %s %s' % (b,url,p)),
+            cmd_str = 'git clone %s %s %s' % (b,url,p);
+            #print(cmd_str);
+
+            sp = subprocess.Popen(cmd_str,
                                   stdout=subprocess.PIPE,
+                                  #stderr=subprocess.STDOUT,
                                   shell=True);
             sp.wait();
+        
         else:
+            
             p = '\'' + abspath_to_repo + '\'';
             
-            sp = subprocess.Popen(('git clone %s %s' % (url,p)),
+            cmd_str = 'git clone %s %s' % (url,p);
+            #print(cmd_str);
+            
+            sp = subprocess.Popen(cmd_str,
                                   stdout=subprocess.PIPE,
+                                  #stderr=subprocess.STDOUT,
                                   shell=True);
+            
             sp.wait();
         
     else: # ...Or just update existing repo...
@@ -410,34 +423,57 @@ def update_local_repo(repo_url):
         gd = '--git-dir=\'' + abspath_to_repo + '/.git/\'';
         
         if (bare):
-            print("Updating bare repo...");
             
-            sp = subprocess.Popen(('git %s fetch %s' % (gd,url)),
-                                  stdout=FNULL,
-                                  stderr=FNULL,
+            print("Updating bare repo...");
+
+            q = '-q origin';
+
+            cmd_str = 'git %s fetch %s master:master' % (gd,q);
+            #print(cmd_str);
+            
+            sp = subprocess.Popen(cmd_str,
+                                  stdout=subprocess.PIPE,
+                                  #stderr=subprocess.STDOUT,
                                   shell=True);
+            
             sp.wait();
+        
         else:
+            
             print("Updating repo...");
             
             wt = '--work-tree=\'' + abspath_to_repo + '\'';
             h = '--hard HEAD';
             x = '-xffd';
             
-            sp = subprocess.Popen(('git %s %s reset %s' % (gd,wt,h)),
-                                  stdout=FNULL,
-                                  stderr=FNULL,
+            cmd_str = 'git %s %s reset %s' % (gd,wt,h);
+            #print(cmd_str);
+
+            sp = subprocess.Popen(cmd_str,
+                                  stdout=subprocess.PIPE,
+                                  #stderr=subprocess.STDOUT,
                                   shell=True);
+            
             sp.wait();
-            sp = subprocess.Popen(('git %s %s clean %s' % (gd,wt,x)),
-                                  stdout=FNULL,
-                                  stderr=FNULL,
+            
+            cmd_str = 'git %s %s clean %s' % (gd,wt,x);
+            #print(cmd_str);
+            
+            sp = subprocess.Popen(cmd_str,
+                                  stdout=subprocess.PIPE,
+                                  #stderr=subprocess.STDOUT,
                                   shell=True);
+            
             sp.wait();
-            sp = subprocess.Popen(('git %s %s pull' % (gd,wt)),
-                                  stdout=FNULL,
-                                  stderr=FNULL,
+            
+            cmd_str = 'git %s %s pull' % (gd,wt);
+            #print(cmd_str);
+            
+            sp = subprocess.Popen(cmd_str,
+                                  stdout=subprocess.PIPE,
+                                  #stderr=subprocess.STDOUT,
                                   shell=True);
+            
             sp.wait();
     
     print("Done.");
@@ -447,7 +483,7 @@ def update_local_repo(repo_url):
 
 
 # Write list of repo local paths to file.
-def write_output(repo_local_paths):
+def write_repo_paths_to_file(repo_local_paths):
 
     outfile = open(args.outfile, 'w');
     outfile.write(';\n'.join(repo_local_paths));
@@ -495,8 +531,9 @@ def main():
                 repo_local_path = update_local_repo(repo_url);
                 download_paths.append(repo_local_path);
 
-            print('');
-            write_output(download_paths);
+            if (args.outfile):
+                print('');
+                write_repo_paths_to_file(download_paths);
 
         elif (repo_urls):
             
