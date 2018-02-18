@@ -1,8 +1,8 @@
-# gitDIGR Toolset
+# gitRHIG Toolset
 
 
 # Description
-gitRHIG (for **git** **R**epository **H**istory **I**nformation **G**rabber) is a toolset for collecting, scraping, and analyzing the changelog information observable in a set of [git](https://git-scm.com/) repositores. The gitDIGR framework consists of Python scripts that are designed to assist with tasks oriented toward mining git repositories to obtain information and insights on repository commit activity and events.
+gitRHIG (for **git** **R**epository **H**istory **I**nformation **G**rabber) is a toolset for collecting, scraping, and analyzing the changelog information observable in a set of [git](https://git-scm.com/) repositores. The gitRHIG framework consists of Python scripts that are designed to assist with tasks oriented toward mining git repositories to obtain information and insights on repository commit activity and events.
 
 
 ## collector
