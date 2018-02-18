@@ -323,6 +323,17 @@ def get_paths_in_repo(paths_in_repo_str):
     return paths_in_repo;
 
 
+# Paths in repo considered when processing each repo.
+def get_tags(tags_str):
+    
+    tags = tuple();
+    if (tags_str):
+        tags = split_str(';', tags_str);
+        tags = tuple(list(set(tags))); # Eliminate any duplicates.
+    
+    return tags;
+
+
 # Verify working directory for runtime storage processing.
 def get_wd(directory_str):
     

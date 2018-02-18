@@ -8,14 +8,14 @@ import modules.shared as sh;
 import os; # File system handling.
 import pandas; # DataFrame handling.
 import re; # Regular expressions.
-import subprocess; # Git commands.
+import subprocess; # Invoke git applications.
 import sys; # Script termination.
 import urlparse; # URL parsing.
 
 
 # Global variables.
 
-args = ''; # For script arguments object.
+args = None; # For script arguments object.
 
 ds_df = None; # Data store DataFrame.
 
@@ -23,8 +23,6 @@ repo_owner = ''; # Identifier for repository owner.
 repo_name = ''; # Identifier for repository name.
 
 path_in_repo = ''; # Path in repository commit log refers to.
-
-tag = ''; # Label commit records.
 
 path_to_repo = ''; # Local environment path to repository.
 
@@ -79,6 +77,9 @@ def check_args():
     # Paths in repo.
     args.paths_in_repo = sh.get_paths_in_repo(args.paths_in_repo);
     
+    # Label commit records.
+    args.tags = sh.get_tags(args.tags);
+
     # 'Since' datetime string.
     args.since = sh.get_since_dt_str(args.since);
     
@@ -438,7 +439,6 @@ def main():
     global repo_owner;
     global repo_name;
     global path_in_repo;
-    global tags;
 
     print('');
     args = process_args();
@@ -471,8 +471,6 @@ def main():
         paths = args.paths_in_repo + source['paths_in_repo'];
         paths = list(set(paths)); # Eliminate any duplicates.
         paths = paths if paths else ['.'];
-        
-        tags = args.tags;
         
         num_paths = len(paths);
         for j in range(0, num_paths): # For each path in repo...
