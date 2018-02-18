@@ -272,7 +272,7 @@ def process_commit_history(gitlog_str):
     commit_count = len(commits);
     for i in range(0, commit_count):
 
-        print("> Processing commit " + str(i+1) + " of " + str(commit_count));
+        print("Processing commit " + str(i+1) + " of " + str(commit_count));
         
         commit = commits[i];
 
@@ -420,9 +420,8 @@ def process_project():
 
         commits_df = construct_commits_df(commits);
         
-        print("Importing " + str(len(commits)) + " commit records into data store:");
         push_commit_records(commits_df, 'commits', args.data_store);
-        print("> Done");
+        print("Commit records imported into data store.");
         
         return True;    
 
@@ -481,18 +480,19 @@ def main():
             path_in_repo = paths[j];
             print("Processing path " + str(j+1) + " of " + str(num_paths));
             print("PATH: \'" + path_in_repo + "\'");
-            print("Scraping repository history:");
+            print("Scraping repository history...");
             proc_start_time = datetime.datetime.now();
             process_project();
             proc_end_time = datetime.datetime.now();
             proc_elapsed_time = proc_end_time - proc_start_time;
             print("Processing Time: " + str(proc_elapsed_time));
+            print("Done.");
         
         print('');
     
     end = datetime.datetime.now();
     elapsed_time = end - start;
-    print("Execution Time: " + str(elapsed_time));
+    print("Elapsed Time: " + str(elapsed_time));
     print("Execution Completed.");
 
     return;
