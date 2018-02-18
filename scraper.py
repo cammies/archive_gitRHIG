@@ -17,18 +17,16 @@ import urlparse; # URL parsing.
 
 args = ''; # For script arguments object.
 
+ds_df = None; # Data store DataFrame.
+
 repo_owner = ''; # Identifier for repository owner.
 repo_name = ''; # Identifier for repository name.
+
 path_in_repo = ''; # Path in repository commit log refers to.
 
-tag = ''; # Commit label.
+tag = ''; # Label commit records.
 
 path_to_repo = ''; # Local environment path to repository.
-
-include_paths = list(); # Repo paths to process.
-exclude_paths = list(); # Repo paths to ignore.
-include_files = list(); # Repo files to process.
-exclude_files = list(); # Repo files to ignore.
 
 
 # Process script arguments.
@@ -36,13 +34,13 @@ def process_args():
     
     argparser = argparse.ArgumentParser();
     
-    argparser.add_argument('-s','--sources', help="semi-colon-separated list of repo URIs (i.e., URL, local path or input file)", type=str);
-    argparser.add_argument('--paths-in-repo', help="comma-separated list of paths in repos to process", type=str);
-    argparser.add_argument('--files-in-repo', help="comma-separated list of files in repos to process", type=str);
-    argparser.add_argument('--data-store', help="output data store", type=str);
-    argparser.add_argument('--since', help="scrape only commits after a specific date", type=str);
-    argparser.add_argument('--until', help="scrape only commits before a specific date", type=str);
-    argparser.add_argument('-a','--anonymize', help="anonymize repo info in data store", action="store_true");
+    argparser.add_argument('-s','--sources', help="path to repository (relative to local working environment)", type=str);
+    argparser.add_argument('-a','--anonymize', help="enforce anonymization on output commit records", action="store_true");
+    argparser.add_argument('--data-store', help="destination data store (XLSX file) for commit records", type=str);
+    argparser.add_argument('--paths-in-repo', help="comma-separated string of repository subdirectories to process", type=str);
+    argparser.add_argument('--tags', help="label commit records", type=str);
+    argparser.add_argument('--since', help="scrape information about commits more recent than a specific date", type=str);
+    argparser.add_argument('--until', help="scrape information about commits older than a specific date", type=str);
     
     return argparser.parse_args();
 
@@ -50,53 +48,56 @@ def process_args():
 # Check script arguments.
 def check_args():
     
-    print("Checking script arguments...");
+    global ds_df;
     
     # Repo sources (URIs and corresponding paths).
-    args.sources = sh.verify_repo_sources(args.sources, False, True);
+    if (args.sources):
+        args.sources = sh.get_repo_local_paths(args.sources)
     if (not args.sources):
-        print("Must provide at least one valid repository URI.");
-        sys.exit();
+        sys.exit("Must provide at least one valid repository URI.");
     
     # Output file.
     if (args.data_store):
+       
         data_store = args.data_store;
-        if (sh.verify_outfile(data_store)): # If data store is okay to write...
-            if (os.path.exists(data_store)): # If data store already exists...
+        if (sh.is_writable_file(data_store)): # If destination data store is cleared for writing...
+            
+            if (os.path.exists(data_store)): # If destination data store already exists, check its structure...
+                
                 ds_df = sh.load_commits_data_store(data_store);
-                if (ds_df is not None): # If formatting is as expected...
-                    args.data_store = os.path.abspath(data_store);
-                else:
-                    print("Malformed data store \'" + args.data_store + "\'.");
-                    sys.exit();
+                if (ds_df is None):
+                    sys.exit("Malformed data store \'" + data_store + "\'.");
+            
+            args.data_store = os.path.abspath(data_store);
+        
         else:
             sys.exit();
-    else: # Default output filename...
-        args.data_store = 'scraper-data-store_' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3];
+
+    else: # Default output data store destination
+        args.data_store = 'scraper-data_store-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3] + '.xlsx';
     
     # Paths in repo.
-    args.paths_in_repo = sh.verify_paths_in_repo(args.paths_in_repo);
+    args.paths_in_repo = sh.get_paths_in_repo(args.paths_in_repo);
     
-    # Filenames in repo.
-    args.files_in_repo = sh.verify_considered_files(args.files_in_repo);
+    # 'Since' datetime string.
+    args.since = sh.get_since_dt_str(args.since);
     
-    # 'Since' date.
-    args.since = sh.verify_since_str(args.since);
-    
-    # 'Until' date.
-    args.until = sh.verify_until_str(args.until);
+    # 'Until' datetime string.
+    args.until = sh.get_until_dt_str(args.until);
 
 
 # Print script argument configurations.
 def echo_args():
     
     arg_paths_in_repo = ", ".join(["\'" + p + "\'" for p in args.paths_in_repo]) if (args.paths_in_repo) else "\'.\'";
-    arg_files_in_repo = ', '.join(["\'" + f + "\'" for f in args.files_in_repo]) if (args.files_in_repo) else "\'*\'";
+    #arg_files_in_repo = ', '.join(["\'" + f + "\'" for f in args.files_in_repo]) if (args.files_in_repo) else "\'*\'";
     
-    print("ALL_REPOS_PATHS: " + str(arg_paths_in_repo));
-    print("ALL_REPOS_FILES: " + str(arg_files_in_repo));
-    print("SINCE: " + str(args.since));
-    print("UNTIL: " + str(args.until));
+    print("ANONYMIZE: " + str(args.anonymize));
+    print("DATA_STORE: " + args.data_store);
+    print("PATHS_IN_ALL_REPOS: " + arg_paths_in_repo);
+    #print("ALL_REPOS_FILES: " + str(arg_files_in_repo));
+    print("SINCE: " + args.since);
+    print("UNTIL: " + args.until);
 
 
 # Extract repo owner and name from remote origin URL.
@@ -107,7 +108,7 @@ def extract_repo_owner_and_name(remote_origin_url):
     
     (scheme, netloc, path, params, query, fragment) = urlparse.urlparse(remote_origin_url);
     
-    if (not scheme):
+    if (not scheme): # This is a git URL...
         path = remote_origin_url.split(':')[1];
     
     repo_owner = os.path.basename(os.path.abspath(os.path.join(path, os.pardir))); # Get name of parent dir in path.
@@ -127,13 +128,54 @@ def get_commit_filenames(files_str):
     filenames = re.findall(filenames_regex, files_str);
     
     for i in range(0, len(filenames)):
-        filenames[i] = filenames[i].rstrip(); # Prune leading/trailing spaces from filename str.
+        filenames[i] = filenames[i].rstrip(); # (Strip leading, trailing spaces from filename str.)
     
-    return filenames;#(filenames, num_files_changed, num_insertions, num_deletions);
+    return filenames;
 
 
-# Get info on line change insertions, deletions and modifications.
-def get_changed_lines_info(file_diff):
+# Parse info from a single commit's log.
+def get_gitshow_str(commit_hash):
+    
+    global path_to_repo;
+    
+    gd = '--git-dir=' + '\'' + path_to_repo + '/.git/' + '\''; # Wrap dir in quotation marks for safety (may contain spaces, etc.).
+    wt = '--work-tree=' + '\'' + path_to_repo + '\''; # Wrap dir in quotation marks for safety (may contain spaces, etc.).
+    ch = commit_hash;
+    wd = '--word-diff';
+    
+    cmd_str = 'git %s %s show %s %s' % (gd,wt,ch,wd);
+    #print(cmd_str);
+    
+    sp = subprocess.Popen((cmd_str),
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          shell=True);
+    (git_show_str, _) = sp.communicate();
+    
+    return git_show_str;
+
+
+#
+def get_files_diff_dict(files_diff_str):
+    
+    files_diff_str = files_diff_str.split('\ndiff --git ');
+    del files_diff_str[0]; # First element not needed (EXPLAIN WHY).
+    
+    files_diff_dict = dict();
+    for diff_str in files_diff_str:
+   
+        diff_str_lines = diff_str.splitlines();
+        
+        dict_key = 'diff --git ' + diff_str_lines[0]; # (First line used as other half of dict key).
+        del diff_str_lines[0]; # Don't include (partial) dict key in file diff lines list. 
+
+        files_diff_dict[dict_key] = diff_str_lines;
+
+    return files_diff_dict;
+
+
+# Get info on line insertions, deletions and modifications.
+def get_changed_lines_info(file_diff_lines):
     
     num_lines_inserted = 0;
     num_lines_deleted = 0;
@@ -142,7 +184,7 @@ def get_changed_lines_info(file_diff):
     addition_regex = r'\{\+.*?\+\}';
     removal_regex = r'\[-.*?-\]';
     
-    for line in file_diff:
+    for line in file_diff_lines:
         
         additions = re.findall(addition_regex, line);
         removals = re.findall(removal_regex, line);
@@ -169,219 +211,50 @@ def get_changed_lines_info(file_diff):
     return (num_lines_inserted, num_lines_deleted, num_lines_modified);
 
 
-# Parse info from a single commit's log.
-def get_git_show_str(commit_hash):
-    
-    global path_to_repo;
-    
-    gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
-    wt = '--work-tree=\'' + path_to_repo + '\'';
-    ch = commit_hash;
-    wd = '--word-diff';
-    
-    sp = subprocess.Popen(('git %s %s show %s %s' % (gd,wt,ch,wd)),
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT,
-                          shell=True);
-    #print('git %s %s show %s %s' % (gd,wt,ch,wd));
-    (git_show_str, _) = sp.communicate();
-    
-    return git_show_str;
-
-
-#
-def get_committed_files_dict(committed_files_str):
-    
-    committed_files_strs = committed_files_str.split('\ndiff --git ');#committed_files_str.split('diff --git a/');
-    del committed_files_strs[0]; # This item will always be the empty str, ''.
-    
-    committed_files_dict = dict();
-    for cf_str in committed_files_strs:
-    
-        cf_str_lines = cf_str.splitlines();
-        dict_key = 'diff --git ' + cf_str_lines[0];
-        #dict_key = dict_key.decode();
-        #print dict_key
-        del cf_str_lines[0];
-
-        committed_files_dict[dict_key] = cf_str_lines;
-
-    return committed_files_dict;
-
-
-# Store committed files records in DataFrame.
-def make_commit_files_df(commit, commit_files):
-    
-    global repo_owner;
-    global repo_name;
-    
-    row_labels = [r for r in range(0, len(commit_files))];
-    
-    COLUMN_LABELS = ['repo_owner', 'repo_name',
-                     'path_in_repo', 'filename',
-                     'commit_hash',
-                     'author_name', 'author_email', 'author_epoch',
-                     'committer_name', 'committer_email', 'committer_epoch',
-                     'num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
-    
-    commit_files_df = pandas.DataFrame(index=row_labels, columns=COLUMN_LABELS);
-    
-    for index, row in commit_files_df.iterrows():
-        
-        row['repo_owner'] = repo_owner;
-        row['repo_name'] = repo_name;
-        commit_file = commit_files[index]; # Get commit file dict at index.
-        path_in_repo = commit_file['path_in_repo'];
-        row['path_in_repo'] = path_in_repo if path_in_repo else '.'; # If path_in_repo is unspecified, file is in repo root.
-        row['filename'] = commit_file['filename'];
-        row['commit_hash'] = commit['commit_hash'];
-        row['author_name'] = commit['author_name'];
-        row['author_email'] = commit['author_email'];
-        row['author_epoch'] = commit['author_epoch'];
-        row['committer_name'] = commit['committer_name'];
-        row['committer_email'] = commit['committer_email'];
-        row['committer_epoch'] = commit['committer_epoch'];
-        #row['subject'] = commit['subject'];
-        row['num_lines_changed'] = commit_file['num_lines_changed'];
-        row['num_lines_inserted'] = commit_file['num_lines_inserted'];
-        row['num_lines_deleted'] = commit_file['num_lines_deleted'];
-        row['num_lines_modified'] = commit_file['num_lines_modified'];
-
-    return commit_files_df;
-
-
-# Import project info to data store.
-def push_project_info(project_record_df, title, data_store):
-    
-    if (os.path.exists(data_store)): # If data store already exists...
-        ds_xls = pandas.ExcelFile(data_store); # Load Excel file.
-        ds_df = ds_xls.parse(); # Convert Excel file to DataFrame.
-        ds_df = pandas.concat([ds_df, project_record_df]); # Concatenate DataFrames.
-        ds_df = ds_df.drop_duplicates().reset_index(drop=True); # Eliminate duplicate rows in DataFrame.
-    else:
-        ds_df = project_record_df;
-
-    sh.write_df_to_file(ds_df, title, data_store);
-    return;
-
-
 # Calculate number of lines inserted, deleted, modified and the combined total for these.
 def get_commit_changes(commit):
-    
-    global path_to_repo;
     
     commit['num_lines_changed'] = 0;
     commit['num_lines_inserted'] = 0;
     commit['num_lines_deleted'] = 0;
     commit['num_lines_modified'] = 0;
     
-    partial_commit = False; # Signifies whether or not commit info in data store will only contain partial commit info.
+    commit_hash = commit['commit_hash']; 
+    gitshow_str = get_gitshow_str(commit_hash);
 
-    if (commit['filenames']):
-        at_least_one = False;
-    else:
-        at_least_one = True;
+    files_diff_dict = get_files_diff_dict(gitshow_str);
     
-    filenames = list();
-    if (include_files): # This means the user directly specified commit files to process (i.e., some subset of all commit files)...
-        for filename in include_files:
-            if (filename in commit['filenames']):
-                filenames.append(filename);
-                partial_commit = True;
-            else:
-                print(sh.get_warning_str("No such file in repo \'" + str(filename) + "\'"));
-    else: # All commit files...
-        filenames = commit['filenames'];
-
-    commit_files = list();
-
-    commit_hash = commit['commit_hash'];
-    committed_files_str = get_git_show_str(commit_hash);
-
-    committed_files_dict = get_committed_files_dict(committed_files_str);
-    
+    filenames = commit['filenames'];
     for i in range(0, len(filenames)):
         
         filename = filenames[i];
 
-        had_quotation_marks = False;
-        if (filename.startswith("\"") and filename.endswith("\"")):
-            filename = filename[1:-1];
-            had_quotation_marks = True;
+        num_lines_changed = 0;
+        num_lines_inserted = 0;
+        num_lines_deleted = 0;
+        num_lines_modified = 0;
 
-        repo_path = os.path.dirname(filename);
-        repo_file = os.path.basename(filename);
-
-        skip = False;
-        for ep in exclude_paths:
-            if (repo_path.startswith(ep)):
-                skip = True;
-        if (repo_file in exclude_files):
-            skip = True;
-
-        if (not skip):
-        
-            num_lines_changed = 0;
-            num_lines_inserted = 0;
-            num_lines_deleted = 0;
-            num_lines_modified = 0;
-
-            if (had_quotation_marks):
-                #filename = filename.decode();
-                #filename = re.sub(r'[^\w]', ' ', filename);
-                #print repr(filename)
-                k = 'diff --git \"a/%s\" \"b/%s\"' % (filename,filename);
-                #print k
-                #k = k.escape_decode#('\\\\', '\\');
-                #print repr(k)
-            else:
-                k = 'diff --git a/%s b/%s' % (filename,filename);
-            file_diff = committed_files_dict[k];
-            (num_lines_inserted, num_lines_deleted, num_lines_modified) = get_changed_lines_info(file_diff);
-            num_lines_changed = num_lines_inserted + num_lines_deleted + num_lines_modified;
-    
-            commit_file = dict();
-            commit_file['path_in_repo'] = repo_path;
-            commit_file['filename'] = repo_file;
-            commit_file['num_lines_changed'] = num_lines_changed;
-            commit_file['num_lines_inserted'] = num_lines_inserted;
-            commit_file['num_lines_deleted'] = num_lines_deleted;
-            commit_file['num_lines_modified'] = num_lines_modified;
-            commit_files.append(commit_file);
-
-            commit['num_lines_changed'] = commit['num_lines_changed'] + num_lines_changed;
-            commit['num_lines_inserted'] = commit['num_lines_inserted'] + num_lines_inserted;
-            commit['num_lines_deleted'] = commit['num_lines_deleted'] + num_lines_deleted;
-            commit['num_lines_modified'] = commit['num_lines_modified'] + num_lines_modified;
-            
-            at_least_one = True;
+        if (filename.startswith('\"') and filename.endswith('\"')):
+            filename = filename[1:-1]; # Strip the quotation marks.
+            files_diff_dict_key = 'diff --git ' + '\"' + 'a/%s' + '\" \"' + 'b/%s' + '\"' & (filename,filename);
         else:
-            partial_commit = True;
-    
-    # Omit this functionaliy for now.
-    #commit_files_df = make_commit_files_df(commit, commit_files);
-    #files_data_store = args.data_store + '-files.xls';
-    #push_project_info(commit_files_df, 'Files', files_data_store);
+            files_diff_dict_key = 'diff --git a/%s b/%s' % (filename,filename);
+        
+        file_diff_lines = files_diff_dict[files_diff_dict_key];
+        
+        (num_lines_inserted, num_lines_deleted, num_lines_modified) = get_changed_lines_info(file_diff_lines);
+        num_lines_changed = num_lines_inserted + num_lines_deleted + num_lines_modified;
 
-    if (partial_commit):
-        commit['commit_hash'] = commit['commit_hash'] + '*';
-    
-    commit['filenames'] = filenames;
-    commit['num_files_changed'] = len(filenames);
-    del commit['filenames']; # (This field is no longer needed.)
-
-    if (at_least_one):
-        pass;
-    else:
-        commit = None;
-    
+        commit['num_lines_changed'] = commit['num_lines_changed'] + num_lines_changed;
+        commit['num_lines_inserted'] = commit['num_lines_inserted'] + num_lines_inserted;
+        commit['num_lines_deleted'] = commit['num_lines_deleted'] + num_lines_deleted;
+        commit['num_lines_modified'] = commit['num_lines_modified'] + num_lines_modified;
+        
     return commit;
     
 
 # Parse project commit info.
-def parse_commits(git_log_str):
-    
-    global path_to_repo;
+def process_commit_history(gitlog_str):
     
     # Initial commit field names.
     COMMIT_FIELDS = ['commit_hash',
@@ -390,11 +263,11 @@ def parse_commits(git_log_str):
                      'subject', 
                      'files_info'];
     
-    log_values = git_log_str.strip('\n\x1e').split('\x1e');
+    field_groups = gitlog_str.strip('\n\x1e').split('\x1e');
     
-    log_commits = [line.strip().split('\x1f') for line in log_values];
+    field_records = [field_group.strip().split('\x1f') for field_group in field_groups];
     
-    commits = [dict(zip(COMMIT_FIELDS, line)) for line in log_commits];
+    commits = [dict(zip(COMMIT_FIELDS, field_record)) for field_record in field_records];
     
     commit_count = len(commits);
     for i in range(0, commit_count):
@@ -410,6 +283,7 @@ def parse_commits(git_log_str):
         commit['committer_email'] = sh.make_ascii_str(commit['committer_email']);
         commit['committer_epoch'] = float(commit['committer_epoch']);
         commit['subject'] = sh.make_ascii_str(commit['subject']);
+        commit['len_subject'] = len(commit['subject']);
         
         if (args.anonymize):
             commit['author_name'] = sh.get_hash_str(commit['author_name']);
@@ -419,7 +293,8 @@ def parse_commits(git_log_str):
             commit['subject'] = sh.get_hash_str(commit['subject']);
         
         commit['filenames'] = get_commit_filenames(commit['files_info']);
-        del commit['files_info']; # (This field is no longer needed.)
+        commit['num_files_changed'] = len(commit['filenames']);
+        del commit['files_info']; # This field is no longer needed.
         
         commit = get_commit_changes(commit);#, commit_hash);
         
@@ -430,67 +305,56 @@ def parse_commits(git_log_str):
 
 # Get commits info as list of dicts, each dict representing a single commit.
 # Inspired by a blog post by Steven Kryskalla: http://blog.lost-theory.org/post/how-to-parse-git-log-output/
-def process_commits_info():
-    
-    global path_to_repo;
-    global path_in_repo;
-    
-    # Git log commit fields.
-    LOG_FORMAT = ['%H',
-                  '%an', '%ae', '%at',
-                  '%cn', '%ce', '%ct',
-                  '%s'];
-    
-    log_format = '%x1e' + '%x1f'.join(LOG_FORMAT) + '%x1f';
-    
-    gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
-    wt = '--work-tree=\'' + path_to_repo + '\'';
-    a = '--after=' + str(args.since);
-    b = '--before=' + str(args.until);
-    s = '--stat';
-    stat_width = 1000; # Width of Git log output. (Using insanely-high number to ensure long filenames are captured correctly.)
-    sw = '--stat-width=' + str(stat_width);
-    f = '--format=' + str(log_format);
-    p = '\'' + sh.add_path_to_uri(path_to_repo, path_in_repo) + '\'';
-    
-    sp = subprocess.Popen(('git %s %s log %s %s %s %s %s %s' % (gd,wt,a,b,s,sw,f,p)),
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT,
-                          shell=True);
-    #print('git %s %s log %s %s %s %s %s \'%s\'' % (gd,wt,a,b,s,sw,f,p));
-    (git_log_str, _) = sp.communicate();
-    
-    if (git_log_str):
-        commits = parse_commits(git_log_str);
-    else:
-        return list();
-    
-    return commits;
-
-
-# Fetch project commits info.
 def get_commits():
     
     global path_to_repo;
     global path_in_repo;
     
-    path_to_path_in_repo = sh.add_path_to_uri(path_to_repo, path_in_repo);
+    # Git log commit fields.
+    GITLOG_FIELDS = ['%H',
+                     '%an', '%ae', '%at',
+                     '%cn', '%ce', '%ct',
+                     '%s'];
     
-    if (sh.is_local_path(path_to_path_in_repo)):
-        return process_commits_info();
+    gitlog_format = '%x1e' + '%x1f'.join(GITLOG_FIELDS) + '%x1f'; # Last '%x1f' accounts for files info field string.
+    
+    gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
+    wt = '--work-tree=\'' + path_to_repo + '\'';
+    a = '--since=' + args.since;
+    b = '--until=' + args.until;
+    s = '--stat';
+    stat_width = 1000; # Length of git-log output. (Using insanely-high value to ensure "long" filenames are captured in their entirety.)
+    sw = '--stat-width=' + str(stat_width);
+    f = '--format=' + gitlog_format;
+    p = '\'' + sh.add_path_to_uri(path_to_repo, path_in_repo) + '\'';
+    
+    cmd_str = 'git %s %s log %s %s %s %s %s %s' % (gd,wt,a,b,s,sw,f,p);
+    #print(cmd_str)
+
+    sp = subprocess.Popen(cmd_str,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          shell=True);
+    
+    (gitlog_str, _) = sp.communicate();
+    
+    if (gitlog_str):
+        commits = process_commit_history(gitlog_str);
+        return commits;
     else:
         return list();
 
 
 # Store project commit records in DataFrame.
-def make_commit_record_df(commits):
+def construct_commits_df(commits):
 
     global repo_owner;
     global repo_name;
     global path_in_repo;
-    #global path_to_repo;
     
-    row_labels = [r for r in range(0, len(commits))];
+    num_records = len(commits);
+
+    row_labels = [row_label for row_label in range(0, num_records)];
     
     COLUMN_LABELS = ['repo_owner', 'repo_name',
                      'path_in_repo',
@@ -498,19 +362,21 @@ def make_commit_record_df(commits):
                      'commit_hash',
                      'author_name', 'author_email', 'author_epoch',
                      'committer_name', 'committer_email', 'committer_epoch',
-                     'subject',
+                     'subject', 'len_subject',
                      'num_files_changed',
                      'num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
     
-    commit_record_df = pandas.DataFrame(index=row_labels, columns=COLUMN_LABELS);
+    commits_df = pandas.DataFrame(index=row_labels, columns=COLUMN_LABELS);
     
-    for index, row in commit_record_df.iterrows():
-        
+    for i in range(0, num_records):
+       
+        row = commits_df.iloc[i];
+
         row['repo_owner'] = repo_owner;
         row['repo_name'] = repo_name;
         row['path_in_repo'] = path_in_repo;
-        row['tags'] = tags;
-        commit = commits[index];
+        row['tags'] = args.tags;
+        commit = commits[i];
         row['commit_hash'] = commit['commit_hash'];
         row['author_name'] = commit['author_name'];
         row['author_email'] = commit['author_email'];
@@ -519,95 +385,68 @@ def make_commit_record_df(commits):
         row['committer_email'] = commit['committer_email'];
         row['committer_epoch'] = commit['committer_epoch'];
         row['subject'] = commit['subject'];
+        row['len_subject'] = commit['len_subject'];
         row['num_files_changed'] = commit['num_files_changed'];
         row['num_lines_changed'] = commit['num_lines_changed'];
         row['num_lines_inserted'] = commit['num_lines_inserted'];
         row['num_lines_deleted'] = commit['num_lines_deleted'];
         row['num_lines_modified'] = commit['num_lines_modified'];
     
-    return commit_record_df;
+    return commits_df;
+
+
+# Export DataFrame to file.
+def push_commit_records(commits_df, title, destination):
+    
+    global ds_df;
+
+    if (ds_df is not None): # If destination already exists...
+        ds_df = pandas.concat([ds_df, commits_df]); # Concatenate existing commits DataFrame (from data store) with commits DataFrame.
+        ds_df = ds_df.drop_duplicates().reset_index(drop=True); # Eliminate any duplicate DataFrame rows.
+    else:
+        ds_df = commits_df;
+
+    sh.write_df_to_file(ds_df, title, destination);
+    
+    return;
 
 
 # Process info for single project.
 def process_project():
     
-    potential_commits = get_commits();
-
-    commits = list();
-    for commit in potential_commits:
-        if (commit is not None):
-            commits.append(commit);
+    commits = get_commits();
 
     if (commits):
 
-        commits_data_store = args.data_store + '-commits.xls';
+        commits_df = construct_commits_df(commits);
+        
+        push_commit_records(commits_df, 'commits', args.data_store);
+        print("Commit records imported into data store.");
+        
+        return True;    
 
-        commit_record_df = make_commit_record_df(commits);
-        
-        print("Importing " + str(len(commits)) + " commit records into data store...");
-        push_project_info(commit_record_df, 'Commits', commits_data_store);
-        
-        print("Saved to \'" + commits_data_store + "\'.");
-        return;
-        
     else: # Commits list is empty...
         print(sh.get_warning_str("No relevant commits found"));
-        return;
-
-
-#
-def get_included_paths(paths):
-
-    included_paths = list();
-    for path in paths:
-        if (not path.startswith('!')):
-            included_paths.append(path);
-
-    return included_paths;
-
-
-#
-def process_paths(paths):
-
-    include = list();
-    exclude = list();
-    for p in paths:
-        if (not p.startswith('!')): # If path does not start with '!' char...
-            include.append(p);
-        else:
-            p = p[1:]); # Remove leading '!' char.
-            exclude.append(p);
-
-    if (not include): # If still empty...
-        include.append('.'); # Signify repo root.
-
-    return include, exclude;
-
-
-#
-def process_files(filenames):
-
-    include = list();
-    exclude = list();
-    for f in filenames:
-        if (not f.startswith('!')): # If filename does not start with '!' char...
-            include.append(f);
-        else:
-            f = f[1:]; # Remove leading '!' char.
-            exclude.append(f); # (Remove leading '!' char).
-
-    return include, exclude;
+        return False;
 
 
 # Driver for scraper.
 def main():
     
     global args;
-    
+    global path_to_repo;
+    global repo_owner;
+    global repo_name;
+    global path_in_repo;
+    global tags;
+
+    print('');
     args = process_args();
-    print('');
+    print("Checking arguments...");
     check_args();
+    print("Done.");
     print('');
+    
     echo_args();
     print('');
     
@@ -615,69 +454,46 @@ def main():
     num_repos = len(args.sources);
     for i in range(0, num_repos):
         
-        global path_to_repo;
-        global repo_owner;
-        global repo_name;
-        global include_paths;
-        global exclude_paths;
-        global include_files;
-        global exclude_files;
-
-        rs_dict = args.sources[i];
+        print("Processing repository " + str(i+1) + " of " + str(num_repos));
         
-        print("Processing repository " + str(i+1) + " of " + str(num_repos) + "...");
+        source = args.sources[i];
         
-        repo_local_path = rs_dict['repo_uri'];
-        print("LOCAL_PATH: " + repo_local_path);
+        path_to_repo = source['repo_uri'];
+        print("LOCAL_PATH: " + path_to_repo);
+        path_to_repo = os.path.abspath(path_to_repo);
         
-        path_to_repo = os.path.abspath(repo_local_path);
         remote_origin_url = sh.get_remote_origin_url(path_to_repo);
         repo_owner, repo_name = extract_repo_owner_and_name(remote_origin_url);
-        
         if (args.anonymize):
             repo_owner = sh.get_hash_str(repo_owner);
             repo_name = sh.get_hash_str(repo_name);
+
+        paths = args.paths_in_repo + source['paths_in_repo'];
+        paths = list(set(paths)); # Eliminate any duplicates.
+        paths = paths if paths else ['.'];
         
-        paths = rs_dict['paths_in_repo'] if rs_dict['paths_in_repo'] else list();
-        paths = paths + args.paths_in_repo;
-        paths = list(set(paths));
-        include_paths, exclude_paths = process_paths(paths):
-
-        files = args.files_in_repo + rs_dict['files_in_repo'];
-        files = list(set(files));
-        include_paths, exclude_paths = process_files(files):
-
-        not_paths_str = ', '.join(["\'" + p + "\'" for p in exclude_paths]) if (exclude_paths) else "\'\'";
-        files_str = ', '.join(["\'" + f + "\'" for f in include_files]) if (include_files) else "\'*\'";
-        not_files_str = ', '.join(["\'" + f + "\'" for f in exclude_files]) if (exclude_files) else "\'\'";
-
-        global tags;
         tags = args.tags;
         
-        num_paths = len(include_paths);
+        num_paths = len(paths);
         for j in range(0, num_paths): # For each path in repo...
             
-            global path_in_repo;
-            path_in_repo = include_paths[j];
-            print("Processing path " + str(j+1) + " of " + str(num_paths) + "...");
+            path_in_repo = paths[j];
+            print("Processing path " + str(j+1) + " of " + str(num_paths));
             print("PATH: \'" + path_in_repo + "\'");
-            print("IGNORE_PATHS: " + not_paths_str + "");
-            print("FILES: " + files_str);
-            print("IGNORE_FILES: " + not_files_str);
-            print('Accumulating project info...');
+            print("Scraping repository history...");
             proc_start_time = datetime.datetime.now();
             process_project();
             proc_end_time = datetime.datetime.now();
             proc_elapsed_time = proc_end_time - proc_start_time;
             print("Processing Time: " + str(proc_elapsed_time));
-            print('Done.');
+            print("Done.");
         
         print('');
     
     end = datetime.datetime.now();
     elapsed_time = end - start;
     print("Elapsed Time: " + str(elapsed_time));
-    print("Execution Complete.");
+    print("Execution Completed.");
 
     return;
 
