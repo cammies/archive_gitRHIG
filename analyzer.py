@@ -51,7 +51,7 @@ def process_args():
 DTD_NAMES = {'Y' : 'total_num_years_active',
              'm' : 'total_num_months_active',
              'd' : 'total_num_days_active',
-             'H' : 'total_num_hour_active',
+             'H' : 'total_num_hours_active',
              'M' : 'total_num_minutes_active',
              'S' : 'total_num_seconds_active'};
 
@@ -239,7 +239,7 @@ attr_labels_dict = {'total_num_commits' : 'Total Number of Commits',
                     'total_num_years_active' : 'Total Number of Years Active',
                     'total_num_months_active' : 'Total Number of Months Active',
                     'total_num_days_active' : 'Total Number of Days Active',
-                    'total_num_hour_active' : 'Total Number of Hours Active',
+                    'total_num_hours_active' : 'Total Number of Hours Active',
                     'total_num_minutes_active' : 'Total Number of Minutes Active',
                     'total_num_seconds_active' : 'Total Number of Seconds Active'}
 
@@ -259,6 +259,14 @@ def process_histogram(data, xlabel, ylabel):
     
     p.quad(top=hist, bottom=0, left=bin_edges[:-1], right=bin_edges[1:], line_color='black', fill_color='blue');
     
+    font_size = "14pt"
+    p.title.align='center';
+    p.title.text_font_size=font_size;
+    p.xaxis.major_label_text_font_size=font_size;
+    p.xaxis.axis_label_text_font_size=font_size;
+    p.yaxis.major_label_text_font_size=font_size;
+    p.yaxis.axis_label_text_font_size=font_size;
+
     global figs_list;
     figs_list.append(p);
 
@@ -286,8 +294,14 @@ def process_cdf(data, xlabel):
                               x_axis_label=xlabel,
                               y_axis_label=ylabel,
                               y_range=bokeh.models.Range1d(0, 1, bounds='auto'));
-    
+   
+    font_size = "16pt"
     p.title.align='center';
+    p.title.text_font_size=font_size;
+    p.xaxis.major_label_text_font_size=font_size;
+    p.xaxis.axis_label_text_font_size=font_size;
+    p.yaxis.major_label_text_font_size=font_size;
+    p.yaxis.axis_label_text_font_size=font_size;
 
     p.line(bin_edges[0:-1], cdf, line_color='red');
     p.circle(bin_edges[0:-1], cdf, line_color='red', fill_color='red');
