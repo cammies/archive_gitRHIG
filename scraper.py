@@ -91,12 +91,10 @@ def check_args():
 def echo_args():
     
     arg_paths_in_repo = ", ".join(["\'" + p + "\'" for p in args.paths_in_repo]) if (args.paths_in_repo) else "\'.\'";
-    #arg_files_in_repo = ', '.join(["\'" + f + "\'" for f in args.files_in_repo]) if (args.files_in_repo) else "\'*\'";
     
     print("ANONYMIZE: " + str(args.anonymize));
     print("DATA_STORE: " + args.data_store);
     print("PATHS_IN_ALL_REPOS: " + arg_paths_in_repo);
-    #print("ALL_REPOS_FILES: " + str(arg_files_in_repo));
     print("SINCE: " + args.since);
     print("UNTIL: " + args.until);
 
@@ -147,7 +145,7 @@ def get_gitshow_str(commit_hash):
     cmd_str = 'git %s %s show %s %s' % (gd,wt,ch,wd);
     #print(cmd_str);
     
-    sp = subprocess.Popen((cmd_str),
+    sp = subprocess.Popen(cmd_str,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
                           shell=True);
@@ -236,7 +234,7 @@ def get_commit_changes(commit):
         num_lines_modified = 0;
 
         if (filename.startswith('\"') and filename.endswith('\"')):
-            filename = filename[1:-1]; # Strip the quotation marks.
+            filename = filename[1:-1]; # Strip the quotation marks from filename string.
             files_diff_dict_key = 'diff --git ' + '\"' + 'a/%s' + '\" \"' + 'b/%s' + '\"' & (filename,filename);
         else:
             files_diff_dict_key = 'diff --git a/%s b/%s' % (filename,filename);
@@ -305,13 +303,13 @@ def process_commit_history(gitlog_str):
 
 
 # Get commits info as list of dicts, each dict representing a single commit.
-# Inspired by a blog post by Steven Kryskalla: http://blog.lost-theory.org/post/how-to-parse-git-log-output/
+# Portions of code inspired by a blog post by Steven Kryskalla: http://blog.lost-theory.org/post/how-to-parse-git-log-output/
 def get_commits():
     
     global path_to_repo;
     global path_in_repo;
     
-    # Git log commit fields.
+    # git log commit fields.
     GITLOG_FIELDS = ['%H',
                      '%an', '%ae', '%at',
                      '%cn', '%ce', '%ct',
@@ -415,12 +413,16 @@ def push_commit_records(commits_df, title, destination):
 # Process info for single project.
 def process_project():
     
+    proc_start_time = datetime.datetime.now();
     commits = get_commits();
 
     if (commits):
 
         commits_df = construct_commits_df(commits);
         
+        proc_end_time = datetime.datetime.now();
+        proc_elapsed_time = proc_end_time - proc_start_time;
+        print("Processing Time: " + str(proc_elapsed_time));
         push_commit_records(commits_df, 'commits', args.data_store);
         print("Commit records imported into data store.");
         
@@ -479,11 +481,11 @@ def main():
             print("Processing path " + str(j+1) + " of " + str(num_paths));
             print("PATH: \'" + path_in_repo + "\'");
             print("Scraping repository history...");
-            proc_start_time = datetime.datetime.now();
+            #proc_start_time = datetime.datetime.now();
             process_project();
-            proc_end_time = datetime.datetime.now();
-            proc_elapsed_time = proc_end_time - proc_start_time;
-            print("Processing Time: " + str(proc_elapsed_time));
+            #proc_end_time = datetime.datetime.now();
+            #proc_elapsed_time = proc_end_time - proc_start_time;
+            #print("Processing Time: " + str(proc_elapsed_time));
             print("Done.");
         
         print('');
