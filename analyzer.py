@@ -40,10 +40,28 @@ def process_args():
     argparser = argparse.ArgumentParser();
     
     argparser.add_argument('--data-store', help="input data store", type=str);
+    argparser.add_argument('--dt-deltas', help="which datetime deltas to consider", type=str);
     argparser.add_argument('--since', help="analyze information about commits records more recent than a specific date", type=str);
     argparser.add_argument('--until', help="analyze information about commits records older than a specific date", type=str);
     
     return argparser.parse_args();
+
+
+# Dict of each datetime delta and its corresponding named unit.
+DTD_NAMES = {'Y' : 'total_num_years_active',
+             'm' : 'total_num_months_active',
+             'd' : 'total_num_days_active',
+             'H' : 'total_num_hour_active',
+             'M' : 'total_num_minutes_active',
+             'S' : 'total_num_seconds_active'};
+
+# List of recognized datetime delta units.
+DTD_CODES = ['Y', # 'year'
+             'm', # 'month'
+             'd', # 'day'
+             'H', # 'hour'
+             'M', # 'minute'
+             'S']; # 'second'
 
 
 def check_args():
@@ -67,7 +85,18 @@ def check_args():
         
     else:
         sys.exit("Must specify an input data store!");
-    
+
+    # Get valid DTDs.
+    dtd_codes = list();
+    if (args.dt_deltas):
+        args.dt_deltas = sh.split_str(',', args.dt_deltas);
+        for dtd_code in args.dt_deltas:
+            if (dtd_code in DTD_CODES):
+                dtd_codes.append(dtd_code);
+            else:
+                print(sh.get_warning_str("Unrecognized datetime delta code \'" + dtd_code + "\'"));
+    args.dt_deltas = list(set(dtd_codes));
+
     # 'Since' datetime string.
     args.since = sh.get_since_dt_str(args.since);
     
@@ -92,30 +121,65 @@ def get_project_ids(commits_df):
     return project_ids_df;
 
 
+# Get datetime delta strftime-like string corresponding to datetime delta code.
+def get_dtd_str(dt, dtd_code):
+   
+    if (dtd_code == 'Y'):
+        return dt.strftime('%Y');
+    elif (dtd_code == 'm'):
+        return dt.strftime('%Y-%m');
+    elif (dtd_code == 'd'):
+        return dt.strftime('%Y-%m-%d');
+    elif (dtd_code == 'H'):
+        return dt.strftime('%Y-%m-%d %H:00:00');
+    elif (dtd_code == 'M'):
+        return dt.strftime('%Y-%m-%d %H:%M:00');
+    elif (dtd_code == 'S'):
+        return dt.strftime('%Y-%m-%d %H:%M:%S');
+
+
+# Convert UNIX epoch to local UTC timestamp. 
+def epoch_to_local_utc(epoch):
+    
+    return datetime.datetime.fromtimestamp(float(epoch));
+
+
+#
+def get_num_dtds(epochs, dtd_code):
+
+    dtds = list();
+    for epoch in epochs:
+
+        dt = epoch_to_local_utc(epoch);
+        dtd_str = get_dtd_str(dt, dtd_code);
+        dtds.append(dtd_str);
+
+    dtds = list(set(dtds));
+
+    num_dtds = len(dtds);
+
+    return num_dtds;
+
+
 # Get datetime delta metrics and project feature vector.
-def get_project_summaries_df(commit_info_df, project_ids_df):
+def get_project_summaries_df(commit_info_df, project_ids_df, attributes):
     
     COLUMN_LABELS = ['repo_owner',
-                     'repo_name',
-                     #'path_in_repo',
-                     #'path_to_repo',
-                     'total_num_commits',
-                     #'total_num_files_changed',
-                     'total_num_lines_changed',
-                     'total_num_insertions',
-                     'total_num_deletions',
-                     'total_num_modifications'];
+                     'repo_name'];
+
+    column_labels = COLUMN_LABELS + attributes;
     
     summary_dfs = list();
     for i in range(0, project_ids_df.shape[0]): # For each project ID...
         
         project_id_row = project_ids_df.iloc[i]; # Get row for project ID.
         
-        summary_df = pandas.DataFrame(index=[0], columns=COLUMN_LABELS);
+        summary_df = pandas.DataFrame(index=[0], columns=column_labels);
         
         commit_hashes = list();
         #filenames = list();
         #num_files_changed = 0;
+        epochs = list();
         num_lines_changed = 0;
         num_lines_inserted = 0;
         num_lines_deleted = 0;
@@ -129,6 +193,8 @@ def get_project_summaries_df(commit_info_df, project_ids_df):
                 commit_hashes.append(cf_df_row['commit_hash']);
                 
                 #filenames.append(cf_df_row['filename']);
+
+                epochs = epochs + [cf_df_row['author_epoch'], cf_df_row['committer_epoch']];
                 
                 #filenames_tuple = ast.literal_eval(ds_df_row['filenames']);
                 #filenames = filenames + filenames_tuple;
@@ -137,7 +203,7 @@ def get_project_summaries_df(commit_info_df, project_ids_df):
                 num_lines_inserted = num_lines_inserted + cf_df_row['num_lines_inserted'];
                 num_lines_deleted = num_lines_deleted + cf_df_row['num_lines_deleted'];
                 num_lines_modified = num_lines_modified + cf_df_row['num_lines_modified'];
-        
+
         summary_df.iloc[0]['repo_owner'] = project_id_row['repo_owner'];
         summary_df.iloc[0]['repo_name'] = project_id_row['repo_name'];
         summary_df.iloc[0]['total_num_commits'] = len(list(set(commit_hashes)));
@@ -146,6 +212,15 @@ def get_project_summaries_df(commit_info_df, project_ids_df):
         summary_df.iloc[0]['total_num_insertions'] = num_lines_inserted;
         summary_df.iloc[0]['total_num_deletions'] = num_lines_deleted;
         summary_df.iloc[0]['total_num_modifications'] = num_lines_modified;
+        
+        epochs = list(set(epochs));
+
+        for dtd_code in args.dt_deltas:
+
+            num_dtds = get_num_dtds(epochs, dtd_code);
+            dtd_name = DTD_NAMES[dtd_code];
+            summary_df.iloc[0][dtd_name] = num_dtds; 
+            summary_df.iloc[0][dtd_code] = num_dtds; 
         
         summary_dfs.append(summary_df);
     
@@ -160,7 +235,13 @@ attr_labels_dict = {'total_num_commits' : 'Total Number of Commits',
                     'total_num_lines_changed' : 'Total Number of Lines Changed',
                     'total_num_insertions' : 'Total Number of Lines Inserted',
                     'total_num_deletions' : 'Total Number of Lines Deleted',
-                    'total_num_modifications' : 'Total Number of Lines Modified'}
+                    'total_num_modifications' : 'Total Number of Lines Modified',
+                    'total_num_years_active' : 'Total Number of Years Active',
+                    'total_num_months_active' : 'Total Number of Months Active',
+                    'total_num_days_active' : 'Total Number of Days Active',
+                    'total_num_hour_active' : 'Total Number of Hours Active',
+                    'total_num_minutes_active' : 'Total Number of Minutes Active',
+                    'total_num_seconds_active' : 'Total Number of Seconds Active'}
 
 
 # Plot histogram for some data set.
@@ -415,18 +496,26 @@ def main():
     project_ids_df = get_project_ids(ds_df);
     print("Done.");
     
-    print("Building project summaries...");
-    project_summaries_df = get_project_summaries_df(ds_df, project_ids_df);
-    print("Done.");
-    
-    num_projects = project_summaries_df.shape[0];    
-    
     attributes = ['total_num_commits',
                   #'total_num_files_changed',
                   'total_num_lines_changed',
                   'total_num_insertions',
                   'total_num_deletions',
                   'total_num_modifications'];
+    dtd_code_labels = list();
+    for dtd_code in args.dt_deltas:
+
+        dtd_name = DTD_NAMES[dtd_code];
+        dtd_code_labels.append(dtd_name);
+
+    attributes = attributes + dtd_code_labels;
+
+    print("Building project summaries...");
+    project_summaries_df = get_project_summaries_df(ds_df, project_ids_df, attributes);
+    print("Done.");
+    
+    num_projects = project_summaries_df.shape[0];    
+    
     print("Generating project statistics...");
     for a in range(0, len(attributes)):
         attr = attributes[a];
