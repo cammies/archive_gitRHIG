@@ -450,7 +450,7 @@ def get_repo_urls(sources_str):
                 print(get_warning_str("\'" + source + "\' does not refer to a GitHub repository"));
             
         else:
-            print(get_warning_str("Malformed URI \'" + uri + "\'"));
+            print(get_warning_str("Malformed URI \'" + source + "\'"));
 
     return repo_urls;
                 

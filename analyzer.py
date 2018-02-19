@@ -20,7 +20,7 @@ import sys; # Script termination.
 
 # Global variables.
 
-data_store = ''; # **Mock database.**
+data_store = None; # **Mock database.**
 since = ''; # View only metrics after a specific date.
 until = ''; # View only metrics before a specific date.
 
@@ -40,42 +40,39 @@ def process_args():
     argparser = argparse.ArgumentParser();
     
     argparser.add_argument('--data-store', help="input data store", type=str);
-    argparser.add_argument('--since', help="scrape only commits after a specific date", type=str);
-    argparser.add_argument('--until', help="scrape only commits before a specific date", type=str);
+    argparser.add_argument('--since', help="analyze information about commits records more recent than a specific date", type=str);
+    argparser.add_argument('--until', help="analyze information about commits records older than a specific date", type=str);
     
     return argparser.parse_args();
 
 
 def check_args():
     
+    global ds_df;
+    
     if (args.data_store):
-        global commit_info_df;
-        global committed_files_df;
+       
+        data_store = args.data_store;
+            
+        if (os.path.exists(data_store)): # If destination data store already exists, check its structure...
+            
+            ds_df = sh.load_commits_data_store(data_store);
+            if (ds_df is None):
+                sys.exit("Malformed data store \'" + data_store + "\'.");
+
+            args.data_store = os.path.abspath(data_store);
         
-        commits_xls = args.data_store + '-commits.xls';
-        commit_info_df = sh.load_commit_info_data_store(commits_xls);
-        if (commit_info_df is not None):
-            args.data_store = os.path.abspath(args.data_store);
         else:
-            print("Malformed data store \'" + commits_xls + "\'.");
-            sys.exit();
+            sys.exit("\'" + data_store + "\' does not refer to a data store.");
         
-        files_xls = args.data_store + '-files.xls';
-        committed_files_df = sh.load_repo_files_data_store(files_xls);
-        if (committed_files_df is not None):
-            args.data_store = os.path.abspath(args.data_store);
-        else:
-            print("Malformed data store \'" + files_xls + "\'.");
-            sys.exit();
     else:
-        print("Must specify an input data store!");
-        sys.exit();
+        sys.exit("Must specify an input data store!");
     
-    # 'Since' date.
-    args.since = sh.verify_since_str(args.since);
+    # 'Since' datetime string.
+    args.since = sh.get_since_dt_str(args.since);
     
-    # 'Until' date.
-    args.until = sh.verify_until_str(args.until);
+    # 'Until' datetime string.
+    args.until = sh.get_until_dt_str(args.until);
 
 
 # Print script argument configurations.
@@ -87,9 +84,9 @@ def echo_args():
 
 
 # Determine project (calculated) IDs from data store.
-def get_project_ids(commit_info_df):
+def get_project_ids(commits_df):
 
-    project_ids_df = commit_info_df[['repo_owner', 'repo_name']];#, 'path_in_repo']];#, 'path_to_repo']];
+    project_ids_df = commits_df[['repo_owner', 'repo_name']];#, 'path_in_repo']];#, 'path_to_repo']];
     project_ids_df = project_ids_df.drop_duplicates().reset_index(drop=True);
     
     return project_ids_df;
@@ -277,8 +274,11 @@ def get_frequency_dist_df(attr, project_summaries_df, interval_df):
                 df.iloc[i]['cumulative_percentage'] = (float(cumulative_frequency) / float(num_projects)) * 100.0;
     
     dfw = df.drop(['>=', '<'], axis=1);    
-    dir_name = os.path.dirname(args.data_store);
-    xlsfile = dir_name + '/' + attr + '-' + os.path.basename(args.data_store) + '.xls';
+    
+    pathname, file_ext = os.path.splitext(args.data_store);
+    dir_name = os.path.dirname(pathname);
+    filename = os.path.basename(pathname);
+    xlsfile = dir_name + '/' + attr + '-' + filename + '.xlsx';
     sh.write_df_to_file(dfw, "frequency_distribution", xlsfile);
     global xlsfiles;
     xlsfiles.append(xlsfile);
@@ -395,8 +395,9 @@ def get_project_attr_frequency_dist_df(attr, project_summaries_df):
 def main():
     
     global args;
-    global commit_info_df;
-    global committed_files_df;
+    #global commit_info_df;
+    #global committed_files_df;
+    global ds_df;
     global xlsfiles;
     
     args = process_args();
@@ -411,11 +412,11 @@ def main():
     bokeh.plotting.output_file(htmlfile, title="Project Statistics");
 
     print("Identifying projects...");
-    project_ids_df = get_project_ids(commit_info_df);
+    project_ids_df = get_project_ids(ds_df);
     print("Done.");
     
     print("Building project summaries...");
-    project_summaries_df = get_project_summaries_df(commit_info_df, project_ids_df);
+    project_summaries_df = get_project_summaries_df(ds_df, project_ids_df);
     print("Done.");
     
     num_projects = project_summaries_df.shape[0];    
@@ -434,8 +435,10 @@ def main():
         
         project_attr_frequency_dist_df = get_project_attr_frequency_dist_df(attr, project_summaries_df);
         
-        dir_name = os.path.dirname(args.data_store);
-        xlsfile = dir_name + '/' + attr + '-all_repos-' + os.path.basename(args.data_store) + '.xls';
+        pathname, file_ext = os.path.splitext(args.data_store);
+        dir_name = os.path.dirname(pathname);
+        filename = os.path.basename(pathname);
+        xlsfile = dir_name + '/' + attr + '-all_repos-' + filename + '.xlsx';
         sh.write_df_to_file(project_attr_frequency_dist_df, attr, xlsfile);
         xlsfiles.append(xlsfile);
         #print("ATTRIBUTE: " + attr);
