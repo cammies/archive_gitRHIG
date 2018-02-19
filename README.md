@@ -104,27 +104,28 @@ $ python analyzer.py --data-store {ds_object}
 ## Python Modules:
 - argparse
 - ast
-- [bokeh](https://pypi.python.org/pypi/bokeh)*
+- [bokeh](https://pypi.python.org/pypi/bokeh)\*
 - collections
 - datetime
-- [dateutil](https://pypi.python.org/pypi/python-dateutil/)*
+- [dateutil](https://pypi.python.org/pypi/python-dateutil/)\*
 - getpass
 - hashlib
 - io
 - json
 - math
-- [numpy](https://pypi.python.org/pypi/numpy)*
+- [numpy](https://pypi.python.org/pypi/numpy)\*
 - os
-- [pandas](https://pypi.python.org/pypi/pandas)*
+- [pandas](https://pypi.python.org/pypi/pandas)\*
 - re
-- [requests](https://pypi.python.org/pypi/requests)*
+- [requests](https://pypi.python.org/pypi/requests)\*
 - subprocess
 - sys
 - textwrap
 - time
 - urlparse
-- [xlwt](https://pypi.python.org/pypi/xlwt)*
-- [openpyxl](https://pypi.python.org/pypi/openpyxl)*
+- \*[xlwt](https://pypi.python.org/pypi/xlwt)\*
+- \*[openpyxl](https://pypi.python.org/pypi/openpyxl)\*
+- [xlswriter](https://pypi.python.org/pypi/XlsxWriter/)\*
 
 \* May require install
 
