@@ -324,14 +324,14 @@ def get_paths_in_repo(paths_in_repo_str):
 
 
 # Paths in repo considered when processing each repo.
-def get_tags(tags_str):
+def get_labels(labels_str):
     
-    tags = tuple();
-    if (tags_str):
-        tags = split_str(';', tags_str);
-        tags = tuple(list(set(tags))); # Eliminate any duplicates.
+    labels = tuple();
+    if (labels_str):
+        labels = split_str(';', labels_str);
+        labels = tuple(list(set(labels))); # Eliminate any duplicates.
     
-    return tags;
+    return labels;
 
 
 # Verify working directory for runtime storage processing.
@@ -468,7 +468,7 @@ def load_commits_data_store(data_store):
     
     COLUMN_LABELS = ['repo_owner', 'repo_name',
                      'path_in_repo',
-                     'tags',
+                     'labels',
                      'commit_hash',
                      'author_name', 'author_email', 'author_epoch',
                      'committer_name', 'committer_email', 'committer_epoch',

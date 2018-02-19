@@ -36,7 +36,7 @@ def process_args():
     argparser.add_argument('-a','--anonymize', help="enforce anonymization on output commit records", action="store_true");
     argparser.add_argument('--data-store', help="destination data store (XLSX file) for commit records", type=str);
     argparser.add_argument('--paths-in-repo', help="comma-separated string of repository subdirectories to process", type=str);
-    argparser.add_argument('--tags', help="label commit records", type=str);
+    argparser.add_argument('--labels', help="label commit records", type=str);
     argparser.add_argument('--since', help="scrape information about commits more recent than a specific date", type=str);
     argparser.add_argument('--until', help="scrape information about commits older than a specific date", type=str);
     
@@ -78,7 +78,7 @@ def check_args():
     args.paths_in_repo = sh.get_paths_in_repo(args.paths_in_repo);
     
     # Label commit records.
-    args.tags = sh.get_tags(args.tags);
+    args.labels = sh.get_labels(args.labels);
 
     # 'Since' datetime string.
     args.since = sh.get_since_dt_str(args.since);
@@ -357,7 +357,7 @@ def construct_commits_df(commits):
     
     COLUMN_LABELS = ['repo_owner', 'repo_name',
                      'path_in_repo',
-                     'tags',
+                     'labels',
                      'commit_hash',
                      'author_name', 'author_email', 'author_epoch',
                      'committer_name', 'committer_email', 'committer_epoch',
@@ -374,7 +374,7 @@ def construct_commits_df(commits):
         row['repo_owner'] = repo_owner;
         row['repo_name'] = repo_name;
         row['path_in_repo'] = path_in_repo;
-        row['tags'] = args.tags;
+        row['labels'] = args.labels;
         commit = commits[i];
         row['commit_hash'] = commit['commit_hash'];
         row['author_name'] = commit['author_name'];
