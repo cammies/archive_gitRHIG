@@ -274,10 +274,10 @@ def get_since_dt_str(since_dt_str):
     
     if (since_dt_str):
         try:
-            dt = dtparser.parse(since)
-            since_dt_str = datetime.datetime.strftime(dt, '%Y-%m-%dT%H:%M:%SZ')
+            dt = dtparser.parse(since_dt_str);
+            since_dt_str = datetime.datetime.strftime(dt, '%Y-%m-%dT%H:%M:%SZ');
         except:
-            print(get_warning_str("Malformed since date \'" + since + "\'"));
+            print(get_warning_str("Malformed since date \'" + since_dt_str + "\'"));
             since_dt_str = get_utc_begin_str();
     else:
         since_dt_str = get_utc_begin_str();
@@ -290,10 +290,10 @@ def get_until_dt_str(until_dt_str):
     
     if (until_dt_str):
         try:
-            dt = dtparser.parse(until)
-            until_dt_str = datetime.datetime.strftime(dt, '%Y-%m-%dT%H:%M:%SZ')
+            dt = dtparser.parse(until_dt_str);
+            until_dt_str = datetime.datetime.strftime(dt, '%Y-%m-%dT%H:%M:%SZ');
         except:
-            print(get_warning_str("Malformed until date \'" + until + "\'"));
+            print(get_warning_str("Malformed until date \'" + until_dt_str + "\'"));
             until_dt_str = get_utc_now_str();
     else:
         until_dt_str = get_utc_now_str();
