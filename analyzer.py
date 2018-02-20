@@ -41,6 +41,7 @@ def process_args():
     
     argparser.add_argument('--data-store', help="input data store", type=str);
     argparser.add_argument('--dt-deltas', help="which datetime deltas to consider", type=str);
+    argparser.add_argument('--labels', help="label commit records", type=str);
     argparser.add_argument('--since', help="analyze information about commits records more recent than a specific date", type=str);
     argparser.add_argument('--until', help="analyze information about commits records older than a specific date", type=str);
     
@@ -96,6 +97,9 @@ def check_args():
             else:
                 print(sh.get_warning_str("Unrecognized datetime delta code \'" + dtd_code + "\'"));
     args.dt_deltas = list(set(dtd_codes));
+
+    # Label commit records.
+    args.labels = sh.get_labels(args.labels);
 
     # 'Since' datetime string.
     args.since = sh.get_since_dt_str(args.since);
@@ -169,6 +173,9 @@ def get_project_summaries_df(commit_info_df, project_ids_df, attributes):
 
     column_labels = COLUMN_LABELS + attributes;
     
+    since = float(sh.utc_str_to_epoch(args.since));
+    until = float(sh.utc_str_to_epoch(args.until));
+
     summary_dfs = list();
     for i in range(0, project_ids_df.shape[0]): # For each project ID...
         
@@ -187,8 +194,24 @@ def get_project_summaries_df(commit_info_df, project_ids_df, attributes):
         for j in range(0, commit_info_df.shape[0]): # For each project commit record (row) in data store DataFrame...
             
             cf_df_row = commit_info_df.iloc[j];
-            if (cf_df_row['repo_owner'] == project_id_row['repo_owner'] and
-                cf_df_row['repo_name'] == project_id_row['repo_name']): # If project ID matches current project ID...
+            
+            record_labels_tuple = ast.literal_eval(cf_df_row['labels']);
+            matches_labels = True;
+            if (args.labels):
+                for label in args.labels:
+                    if (label not in record_labels_tuple):
+                        matches_labels = False;
+            
+            cf_df_author_date = float(cf_df_row['author_epoch']);
+            cf_df_committer_date = float(cf_df_row['committer_epoch']);
+            
+            if (matches_labels and
+                cf_df_row['repo_owner'] == project_id_row['repo_owner'] and
+                cf_df_row['repo_name'] == project_id_row['repo_name'] and # If project ID matches current project ID...
+                cf_df_author_date >= since and 
+                cf_df_author_date <= until and
+                cf_df_committer_date >= since and 
+                cf_df_committer_date <= until):
                 
                 commit_hashes.append(cf_df_row['commit_hash']);
                 
