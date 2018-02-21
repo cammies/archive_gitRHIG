@@ -494,7 +494,7 @@ def get_repo_urls(sources_str):
             if (is_repo_url(build_repo_ssh_url(source))):
                 
                 if (source not in repo_urls):
-                    repo_urls.append(uri);
+                    repo_urls.append(source);
             else:
                 print(get_warning_str("\'" + source + "\' does not refer to a GitHub repository"));
             
