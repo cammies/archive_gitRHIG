@@ -277,13 +277,13 @@ def process_commit_history(gitlog_str):
         
         commit = commits[i];
 
-        commit['author_name'] = sh.encode_str(commit['author_name']);
-        commit['author_email'] = sh.encode_str(commit['author_email']);
+        commit['author_name'] = sh.decode_str(commit['author_name']);
+        commit['author_email'] = sh.decode_str(commit['author_email']);
         commit['author_epoch'] = float(commit['author_epoch']);
-        commit['committer_name'] = sh.encode_str(commit['committer_name']);
-        commit['committer_email'] = sh.encode_str(commit['committer_email']);
+        commit['committer_name'] = sh.decode_str(commit['committer_name']);
+        commit['committer_email'] = sh.decode_str(commit['committer_email']);
         commit['committer_epoch'] = float(commit['committer_epoch']);
-        commit['subject'] = sh.encode_str(commit['subject']);
+        commit['subject'] = sh.decode_str(commit['subject']);
         commit['len_subject'] = len(commit['subject']);
         
         if (args.anonymize):

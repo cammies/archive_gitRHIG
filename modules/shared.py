@@ -265,7 +265,7 @@ def is_ascii(text):
 
 
 # Formulate UTF-8 string from text. Non-UTF-8 chars replaced with '?'.
-def encode_str(text):
+def decode_str(text):
     
     text = text.decode('utf-8', 'replace');
     
