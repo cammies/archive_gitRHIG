@@ -206,7 +206,9 @@ def is_writable_file(dest):
 # Generate SHA-1 hash string for input string.
 def get_hash_str(in_str):
     
-    hash_obj = hashlib.sha1(in_str.encode());
+    in_str = in_str.encode('utf-8', 'replace');
+
+    hash_obj = hashlib.sha1(in_str);
     hex_digit = hash_obj.hexdigest();
     
     hash_str = str(hex_digit);
@@ -236,7 +238,7 @@ def get_remote_origin_url(path_to_repo):
     
     return remote_origin_url;
 
-#temp
+
 
 # Check if text is ASCII.
 def is_ascii(text):
@@ -267,15 +269,7 @@ def make_ascii_str(text):
     
     text = text.decode('utf-8', 'replace');
     
-    ascii_text = '';
-    for i in range(0, len(text)): # For each char in text...
-        c = text[i]; # Get char at position i.
-        if (is_ascii(c)):
-            ascii_text = ascii_text + c;
-        else:
-            ascii_text = ascii_text + '?'
-    
-    return ascii_text;
+    return text;
 
 
 # Formulate since-datetime str.
