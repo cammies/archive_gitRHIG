@@ -416,7 +416,7 @@ def process_infile(infile):
 
 
 # Return list of source dicts.
-def get_sources(sources_str):
+def get_local_path_sources(sources_str):
 
     raw_sources = split_str(';', sources_str); # Multiple URIs are semi-colon separated.
     raw_sources = list(set(raw_sources)); # Eliminate any duplicates.
@@ -441,7 +441,7 @@ def get_sources(sources_str):
 #
 def get_repo_local_paths(sources_str):
     
-    sources = get_sources(sources_str);
+    sources = get_local_path_sources(sources_str);
 
     repo_local_paths = list();
     for source_dict in sources:
@@ -462,10 +462,29 @@ def get_repo_local_paths(sources_str):
     return repo_local_paths;
                 
 
+# Return list of source dicts.
+def get_url_sources(sources_str):
+
+    raw_sources = split_str(';', sources_str); # Multiple URIs are semi-colon separated.
+    raw_sources = list(set(raw_sources)); # Eliminate any duplicates.
+    
+    sources = list();
+    for source in raw_sources:
+        
+        if (os.path.isfile(source)): # If source is a file...
+            file_sources_str = process_infile(source); # Source str.
+            sources_from_file = get_sources(file_sources_str); # List of dicts.
+            sources = sources + sources_from_file;
+        else:
+            sources.append(source);
+
+    return sources;
+
+
 #
 def get_repo_urls(sources_str):
     
-    sources = get_sources(sources_str);
+    sources = get_url_sources(sources_str);
 
     repo_urls = list();
     for source_dict in sources:
