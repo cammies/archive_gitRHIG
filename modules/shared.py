@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 
+import chardet; # Detect string encoding.
 import datetime; # Datetime handling.
 import dateutil.parser as dtparser;
 import hashlib; # Generate hash from string.
@@ -246,25 +247,32 @@ def is_ascii(text):
         return False;
 
 
+## Formulate ASCII string from text. Non-ASCII chars replaced with '?'.
+#def make_ascii_str(text):
+#    
+#    ascii_text = "";
+#    
+#    for c in text:
+#        if (is_ascii(c)):
+#            ascii_text = ascii_text + c;
+#        else:
+#            ascii_text = ascii_text + '?'
+#    
+#    return ascii_text;
+
+
 # Formulate ASCII string from text. Non-ASCII chars replaced with '?'.
 def make_ascii_str(text):
     
-    ascii_text = "";
+    text = text.decode('utf-8', 'replace');
     
-    for c in text:
+    ascii_text = '';
+    for i in range(0, len(text)): # For each char in text...
+        c = text[i]; # Get char at position i.
         if (is_ascii(c)):
             ascii_text = ascii_text + c;
         else:
             ascii_text = ascii_text + '?'
-    
-    return ascii_text;
-
-
-# Formulate ASCII string from text. Non-ASCII chars replaced with '?'.
-def make_ascii_str2(text):
-    
-    text = text.decode('utf-8');
-    ascii_text = text.encode('ascii','replace');
     
     return ascii_text;
 
