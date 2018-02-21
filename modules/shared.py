@@ -236,6 +236,7 @@ def get_remote_origin_url(path_to_repo):
     
     return remote_origin_url;
 
+#temp
 
 # Check if text is ASCII.
 def is_ascii(text):
