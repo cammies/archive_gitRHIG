@@ -105,6 +105,7 @@ $ python analyzer.py --data-store {ds_object}
 - argparse
 - ast
 - [bokeh](https://pypi.python.org/pypi/bokeh)\*
+- chardet
 - collections
 - datetime
 - [dateutil](https://pypi.python.org/pypi/python-dateutil/)\*
