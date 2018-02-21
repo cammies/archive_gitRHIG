@@ -102,10 +102,12 @@ def check_args():
     args.labels = sh.get_labels(args.labels);
 
     # 'Since' datetime string.
-    args.since = sh.get_since_dt_str(args.since);
+    since_dt_str = sh.get_since_dt_str(args.since);
+    args.since = since_dt_str if since_dt_str else sh.get_utc_begin_str();
     
     # 'Until' datetime string.
-    args.until = sh.get_until_dt_str(args.until);
+    until_dt_str = sh.get_until_dt_str(args.until);
+    args.until = until_dt_str if until_dt_str else sh.get_utc_now_str();
 
 
 # Print script argument configurations.

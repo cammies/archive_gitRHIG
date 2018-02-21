@@ -81,11 +81,13 @@ def check_args():
     args.labels = sh.get_labels(args.labels);
 
     # 'Since' datetime string.
-    args.since = sh.get_since_dt_str(args.since);
+    since_dt_str = sh.get_since_dt_str(args.since);
+    args.since = since_dt_str if since_dt_str else sh.get_utc_begin_str();
     
     # 'Until' datetime string.
-    args.until = sh.get_until_dt_str(args.until);
-
+    until_dt_str = sh.get_until_dt_str(args.until);
+    args.until = until_dt_str if until_dt_str else sh.get_utc_now_str();
+    
 
 # Print script argument configurations.
 def echo_args():
@@ -319,8 +321,8 @@ def get_commits():
     
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
     wt = '--work-tree=\'' + path_to_repo + '\'';
-    a = '--since=' + args.since;
-    b = '--until=' + args.until;
+    a = '--since=\'' + since_dt_str + '\'';
+    b = '--until=\'' + until_dt_str + '\'';
     s = '--stat';
     stat_width = 1000; # Length of git-log output. (Using insanely-high value to ensure "long" filenames are captured in their entirety.)
     sw = '--stat-width=' + str(stat_width);
@@ -443,6 +445,8 @@ def main():
     global repo_name;
     global path_in_repo;
     global labels_for_repo;
+    global since_dt_str;
+    global until_dt_str;
 
     print('');
     args = process_args();
@@ -478,12 +482,20 @@ def main():
         
         labels_for_repo = tuple(list(set(args.labels + source['labels_for_repo'])));
 
+        since = sh.get_since_dt_str(source['since']);
+        since_dt_str = since if since else args.since;
+        
+        until = sh.get_until_dt_str(source['until']);
+        until_dt_str = until if until else args.until;
+
         num_paths = len(paths);
         for j in range(0, num_paths): # For each path in repo...
             
             path_in_repo = paths[j];
             print("Processing path " + str(j+1) + " of " + str(num_paths));
             print("PATH: \'" + path_in_repo + "\'");
+            print("SINCE: " + since_dt_str);
+            print("UNTIL: " + until_dt_str);
             print("Scraping repository history...");
             #proc_start_time = datetime.datetime.now();
             process_project();

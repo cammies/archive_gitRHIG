@@ -278,9 +278,9 @@ def get_since_dt_str(since_dt_str):
             since_dt_str = datetime.datetime.strftime(dt, '%Y-%m-%dT%H:%M:%SZ');
         except:
             print(get_warning_str("Malformed since date \'" + since_dt_str + "\'"));
-            since_dt_str = get_utc_begin_str();
+            since_dt_str = '';#get_utc_begin_str();
     else:
-        since_dt_str = get_utc_begin_str();
+        since_dt_str = '';#get_utc_begin_str();
     
     return since_dt_str;
 
@@ -294,9 +294,9 @@ def get_until_dt_str(until_dt_str):
             until_dt_str = datetime.datetime.strftime(dt, '%Y-%m-%dT%H:%M:%SZ');
         except:
             print(get_warning_str("Malformed until date \'" + until_dt_str + "\'"));
-            until_dt_str = get_utc_now_str();
+            until_dt_str = '';#get_utc_now_str();
     else:
-        until_dt_str = get_utc_now_str();
+        until_dt_str = '';#get_utc_now_str();
     
     return until_dt_str;
 
@@ -355,6 +355,8 @@ def parse_source(source_str):
     
     paths_in_repo = list();
     labels_for_repo = tuple();
+    since_dt = list();
+    until_dt = list();
 
     try:
         
@@ -369,15 +371,33 @@ def parse_source(source_str):
                 paths_in_repo = query_dict[field];
             elif (field == 'label'):
                 labels_for_repo = tuple(list(set(query_dict[field]))); # Eliminate and duplicates.
+            elif (field == 'since'):
+                since_dt = query_dict[field];
+            elif (field == 'until'):
+                until_dt = query_dict[field];
             else:
                 print(get_warning_str("No such query field \'" + str(field) + "\'"));
         
         source['uri'] = repo_uri;
         source['paths_in_repo'] = paths_in_repo;
         source['labels_for_repo'] = labels_for_repo;
+
+        if (len(since_dt) > 1):
+            print(get_warning_str("Too many since dates"));
+        elif (len(since_dt) == 1):
+            source['since'] = since_dt[0];
+        else:
+            source['since'] = '';
+        
+        if (len(until_dt) > 1):
+            print(get_warning_str("Too many until dates"));
+        elif (len(until_dt) == 1):
+            source['until'] = until_dt[0];
+        else:
+            source['until'] = '';
     
     except:
-        print(get_warning_str("Bad source string \'" + str(source_str) + "\'"));
+        print(get_warning_str("Malformed source string \'" + str(source_str) + "\'"));
         source['uri'] = '';
     
     return source;

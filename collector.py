@@ -238,12 +238,14 @@ def check_args():
 
     #args.query = (args.query).split();
     
-    # 'Since' date.
-    args.since = sh.get_since_dt_str(args.since);
+    # 'Since' datetime string.
+    since_dt_str = sh.get_since_dt_str(args.since);
+    args.since = since_dt_str if since_dt_str else sh.get_utc_begin_str();
     
-    # 'Until' date.
-    args.until = sh.get_until_dt_str(args.until);
-
+    # 'Until' datetime string.
+    until_dt_str = sh.get_until_dt_str(args.until);
+    args.until = until_dt_str if until_dt_str else sh.get_utc_now_str();
+    
 
 # Print script argument configurations.
 def echo_args():
