@@ -354,6 +354,7 @@ def parse_source(source_str):
     source = dict();
     
     paths_in_repo = list();
+    labels_for_repo = tuple();
 
     try:
         
@@ -366,14 +367,18 @@ def parse_source(source_str):
 
             if (field == 'path'):
                 paths_in_repo = query_dict[field];
+            elif (field == 'label'):
+                labels_for_repo = tuple(list(set(query_dict[field]))); # Eliminate and duplicates.
             else:
                 print(get_warning_str("No such query field \'" + str(field) + "\'"));
         
-        source['repo_uri'] = repo_uri;
+        source['uri'] = repo_uri;
         source['paths_in_repo'] = paths_in_repo;
+        source['labels_for_repo'] = labels_for_repo;
     
     except:
-        source['repo_uri'] = '';
+        print(get_warning_str("Bad source string \'" + str(source_str) + "\'"));
+        source['uri'] = '';
     
     return source;
 
@@ -387,7 +392,7 @@ def process_infile(infile):
     return sources;
 
 
-#
+# Return list of source dicts.
 def get_sources(sources_str):
 
     raw_sources = split_str(';', sources_str); # Multiple URIs are semi-colon separated.
@@ -396,12 +401,16 @@ def get_sources(sources_str):
     sources = list();
     for source in raw_sources:
         
-        if (os.path.isfile(source)): # If source is a file...
-            file_sources_str = process_infile(source);
-            sources_from_file = get_sources(file_sources_str);
+        source_dict = parse_source(source);
+        if (os.path.isfile(source_dict['uri'])): # If source is a file...
+            file_sources_str = process_infile(source_dict['uri']); # Source str.
+            sources_from_file = get_sources(file_sources_str); # List of dicts.
+            for i in range (0, len(sources_from_file)):
+                sources_from_file[i]['paths_in_repo'] = sources_from_file[i]['paths_in_repo'] + source_dict['paths_in_repo'];
+                sources_from_file[i]['labels_for_repo'] = sources_from_file[i]['labels_for_repo'] + source_dict['labels_for_repo'];
             sources = sources + sources_from_file;
         else:
-            sources.append(source);
+            sources.append(source_dict);
 
     return sources;
 
@@ -412,11 +421,9 @@ def get_repo_local_paths(sources_str):
     sources = get_sources(sources_str);
 
     repo_local_paths = list();
-    for source in sources:
+    for source_dict in sources:
 
-        source_dict = parse_source(source);
-        
-        uri = source_dict['repo_uri'];
+        uri = source_dict['uri'];
         if (is_local_path(uri)):
                     
             if (is_repo_root(uri)):

@@ -21,8 +21,8 @@ ds_df = None; # Data store DataFrame.
 
 repo_owner = ''; # Identifier for repository owner.
 repo_name = ''; # Identifier for repository name.
-
 path_in_repo = ''; # Path in repository commit log refers to.
+labels_for_repo = list();
 
 path_to_repo = ''; # Local environment path to repository.
 
@@ -235,7 +235,7 @@ def get_commit_changes(commit):
 
         if (filename.startswith('\"') and filename.endswith('\"')):
             filename = filename[1:-1]; # Strip the quotation marks from filename string.
-            files_diff_dict_key = 'diff --git ' + '\"' + 'a/%s' + '\" \"' + 'b/%s' + '\"' & (filename,filename);
+            files_diff_dict_key = ('diff --git ' + '\"' + 'a/%s' + '\" \"' + 'b/%s' + '\"') % (filename,filename);
         else:
             files_diff_dict_key = 'diff --git a/%s b/%s' % (filename,filename);
         
@@ -350,6 +350,7 @@ def construct_commits_df(commits):
     global repo_owner;
     global repo_name;
     global path_in_repo;
+    global labels_for_repo;
     
     num_records = len(commits);
 
@@ -374,7 +375,7 @@ def construct_commits_df(commits):
         row['repo_owner'] = repo_owner;
         row['repo_name'] = repo_name;
         row['path_in_repo'] = path_in_repo;
-        row['labels'] = args.labels;
+        row['labels'] = labels_for_repo;
         commit = commits[i];
         row['commit_hash'] = commit['commit_hash'];
         row['author_name'] = commit['author_name'];
@@ -441,6 +442,7 @@ def main():
     global repo_owner;
     global repo_name;
     global path_in_repo;
+    global labels_for_repo;
 
     print('');
     args = process_args();
@@ -460,7 +462,7 @@ def main():
         
         source = args.sources[i];
         
-        path_to_repo = source['repo_uri'];
+        path_to_repo = source['uri'];
         print("LOCAL_PATH: " + path_to_repo);
         path_to_repo = os.path.abspath(path_to_repo);
         
@@ -474,6 +476,8 @@ def main():
         paths = list(set(paths)); # Eliminate any duplicates.
         paths = paths if paths else ['.'];
         
+        labels_for_repo = tuple(list(set(args.labels + source['labels_for_repo'])));
+
         num_paths = len(paths);
         for j in range(0, num_paths): # For each path in repo...
             
