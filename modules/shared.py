@@ -468,19 +468,20 @@ def get_repo_urls(sources_str):
     sources = get_sources(sources_str);
 
     repo_urls = list();
-    for source in sources:
+    for source_dict in sources:
 
-        if (is_url(source)):
+        uri = source_dict['uri'];
+        if (is_url(uri)):
             
-            if (is_repo_url(build_repo_ssh_url(source))):
+            if (is_repo_url(build_repo_ssh_url(uri))):
                 
-                if (source not in repo_urls):
-                    repo_urls.append(source);
+                if (uri not in repo_urls):
+                    repo_urls.append(uri);
             else:
-                print(get_warning_str("\'" + source + "\' does not refer to a GitHub repository"));
+                print(get_warning_str("\'" + uri + "\' does not refer to a GitHub repository"));
             
         else:
-            print(get_warning_str("Malformed URI \'" + source + "\'"));
+            print(get_warning_str("Malformed URI \'" + uri + "\'"));
 
     return repo_urls;
                 
