@@ -142,9 +142,10 @@ def get_gitshow_str(commit_hash):
     gd = '--git-dir=' + '\'' + path_to_repo + '/.git/' + '\''; # Wrap dir in quotation marks for safety (may contain spaces, etc.).
     wt = '--work-tree=' + '\'' + path_to_repo + '\''; # Wrap dir in quotation marks for safety (may contain spaces, etc.).
     ch = commit_hash;
+    c = '--color=always';
     wd = '--word-diff';
     
-    cmd_str = 'git %s %s show %s %s' % (gd,wt,ch,wd);
+    cmd_str = 'git %s %s show %s %s %s' % (gd,wt,ch,wd,c);
     #print(cmd_str);
     
     sp = subprocess.Popen(cmd_str,
@@ -156,10 +157,27 @@ def get_gitshow_str(commit_hash):
     return git_show_str;
 
 
+KEY_BEGIN = '\x1B\x5B\x31\x6D';
+
+KEY_END = '\x1B\x5B\x6D';
+
+ADDITION_REGEX = re.compile(ur'\x1B\x5B\x33\x32\x6D\x7B\x2B.*?\x2B\x7D\x1B\x5B\x6D',
+                            re.UNICODE);
+
+ADDITION_START_END_REGEX = re.compile(ur'^\x1B\x5B\x33\x32\x6D\x7B\x2B.*?\x2B\x7D\x1B\x5B\x6D$',
+                                      re.UNICODE);
+
+REMOVAL_REGEX = re.compile(ur'\x1B\x5B\x33\x31\x6D\x5B\x2D.*?\x2D\x5D\x1B\x5B\x6D',
+                           re.UNICODE);
+
+REMOVAL_START_END_REGEX = re.compile(ur'^\x1B\x5B\x33\x31\x6D\x5B\x2D.*?\x2D\x5D\x1B\x5B\x6D$',
+                                     re.UNICODE);
+
+
 #
 def get_files_diff_dict(files_diff_str):
-    
-    files_diff_str = files_diff_str.split('\ndiff --git ');
+   
+    files_diff_str = files_diff_str.split('\n' + KEY_BEGIN + 'diff --git ');
     del files_diff_str[0]; # First element not needed (EXPLAIN WHY).
     
     files_diff_dict = dict();
@@ -167,7 +185,7 @@ def get_files_diff_dict(files_diff_str):
    
         diff_str_lines = diff_str.splitlines();
         
-        dict_key = 'diff --git ' + diff_str_lines[0]; # (First line used as other half of dict key).
+        dict_key = KEY_BEGIN + 'diff --git ' + diff_str_lines[0]; # (First line used as other half of dict key).
         del diff_str_lines[0]; # Don't include (partial) dict key in file diff lines list. 
 
         files_diff_dict[dict_key] = diff_str_lines;
@@ -182,36 +200,38 @@ def get_changed_lines_info(file_diff_lines):
     num_lines_deleted = 0;
     num_lines_modified = 0;
     
-    addition_regex = r'\{\+.*?\+\}';
-    removal_regex = r'\[-.*?-\]';
-    
     for line in file_diff_lines:
         
-        additions = re.findall(addition_regex, line);
-        removals = re.findall(removal_regex, line);
+        line = line.strip();
+
+        additions = re.findall(ADDITION_REGEX, line);
+        removals = re.findall(REMOVAL_REGEX, line);
         
-        if (additions and not removals):
-            if (line.startswith('{+') and line.endswith('+}')):
+        if (additions and not removals): # Additions ONLY...
+            if (ADDITION_START_END_REGEX.search(line)):
                 if (len(additions) > 1):
                     num_lines_modified = num_lines_modified + 1;
                 else:
                     num_lines_inserted = num_lines_inserted + 1;
             else:
                 num_lines_modified = num_lines_modified + 1;
-        elif (removals and not additions):
-            if (line.startswith('[-') and line.endswith('-]')):
+        elif (removals and not additions): # Removals ONLY...
+            if (REMOVAL_START_END_REGEX.search(line)):
                 if (len(removals) > 1):
                     num_lines_modified = num_lines_modified + 1;
                 else:
                     num_lines_deleted = num_lines_deleted + 1;
             else:
                 num_lines_modified = num_lines_modified + 1;
-        elif (additions and removals):
+        elif (additions and removals): # Both additions AND removals...
             num_lines_modified = num_lines_modified + 1;
     
     return (num_lines_inserted, num_lines_deleted, num_lines_modified);
 
 
+text_file = open("./anssssi.txt", "w");
+
+    
 # Calculate number of lines inserted, deleted, modified and the combined total for these.
 def get_commit_changes(commit):
     
@@ -222,6 +242,7 @@ def get_commit_changes(commit):
     
     commit_hash = commit['commit_hash']; 
     gitshow_str = get_gitshow_str(commit_hash);
+    text_file.write(gitshow_str);
 
     files_diff_dict = get_files_diff_dict(gitshow_str);
     
@@ -240,7 +261,8 @@ def get_commit_changes(commit):
             files_diff_dict_key = ('diff --git ' + '\"' + 'a/%s' + '\" \"' + 'b/%s' + '\"') % (filename,filename);
         else:
             files_diff_dict_key = 'diff --git a/%s b/%s' % (filename,filename);
-        
+
+        files_diff_dict_key = KEY_BEGIN + files_diff_dict_key + KEY_END;
         file_diff_lines = files_diff_dict[files_diff_dict_key];
         
         (num_lines_inserted, num_lines_deleted, num_lines_modified) = get_changed_lines_info(file_diff_lines);
@@ -510,6 +532,8 @@ def main():
     elapsed_time = end - start;
     print("Elapsed Time: " + str(elapsed_time));
     print("Execution Completed.");
+
+    text_file.close()
 
     return;
 
