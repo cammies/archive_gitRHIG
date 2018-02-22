@@ -339,7 +339,7 @@ def get_commits():
                      '%cn', '%ce', '%ct',
                      '%s'];
     
-    gitlog_format = '%x1e' + '%x1f'.join(GITLOG_FIELDS) + '%x1f'; # Last '%x1f' accounts for files info field string.
+    gitlog_format = '\x1e' + '\x1f'.join(GITLOG_FIELDS) + '\x1f'; # Last '%x1f' accounts for files info field string.
     
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
     wt = '--work-tree=\'' + path_to_repo + '\'';
