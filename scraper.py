@@ -146,7 +146,7 @@ def get_gitshow_str(commit_hash):
     wd = '--word-diff';
     
     cmd_str = 'git %s %s %s show %s %s' % (config,gd,wt,ch,wd);
-    print(cmd_str);
+    #print(cmd_str);
     
     sp = subprocess.Popen(cmd_str,
                           stdout=subprocess.PIPE,
