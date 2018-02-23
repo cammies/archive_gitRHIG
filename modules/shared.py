@@ -41,7 +41,9 @@ def is_url(uri):
 # Check if URL refers to a GitHub repository.
 def is_repo_url(url):
 
-    cmd_str = 'git ls-remote %s' % (url);
+    config = '-c color.ui=\'false\'';
+    
+    cmd_str = 'git %s ls-remote %s' % (config,url);
     #print(cmd_str);
 
     sp = subprocess.Popen(cmd_str,
@@ -69,10 +71,11 @@ def is_local_path(uri):
 # Check if local repository is corrupt.
 def is_corrupt_repo(path_to_repo):
     
+    config = '-c color.ui=\'false\'';
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
     wt = '--work-tree=\'' + path_to_repo + '\'';
     
-    cmd_str = 'git %s %s log' % (gd,wt);
+    cmd_str = 'git %s %s %s log' % (config,gd,wt);
     #print(cmd_str);
     
     sp = subprocess.Popen(cmd_str,
@@ -219,12 +222,13 @@ def get_hash_str(in_str):
 # Get repo remote origin URL.
 def get_remote_origin_url(path_to_repo):
     
+    config = '-c color.ui=\'false\'';
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
     wt = '--work-tree=\'' + path_to_repo + '\'';
     
     wd = '--word-diff';
     
-    cmd_str = 'git %s %s config --get remote.origin.url' % (gd,wt);
+    cmd_str = 'git %s %s %s config --get remote.origin.url' % (config,gd,wt);
     #print(cmd_str);
     
     sp = subprocess.Popen(cmd_str,

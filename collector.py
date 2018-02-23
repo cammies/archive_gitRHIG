@@ -342,10 +342,11 @@ def get_repo_ssh_url(repo_url):
 # Determine whether or not repo is bare.
 def is_bare_repo(path_to_repo):
     
+    config = '-c color.ui=\'false\'';
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
     ibr = '--is-bare-repository';
 
-    cmd_str = 'git %s rev-parse %s' % (gd,ibr);
+    cmd_str = 'git %s %s rev-parse %s' % (config,gd,ibr);
     #print(cmd_str);
 
     sp = subprocess.Popen(cmd_str,
