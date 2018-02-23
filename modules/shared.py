@@ -525,7 +525,7 @@ def load_commits_data_store(data_store):
                      'commit_hash',
                      'author_name', 'author_email', 'author_epoch',
                      'committer_name', 'committer_email', 'committer_epoch',
-                     'subject',
+                     'subject', 'len_subject',
                      'num_files_changed',
                      'num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
 
