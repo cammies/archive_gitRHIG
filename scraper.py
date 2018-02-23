@@ -139,15 +139,14 @@ def get_gitshow_str(commit_hash):
     
     global path_to_repo;
     
-    config = '-c color.diff.plain=\'normal\' -c color.diff.meta=\'normal bold\' -c color.diff.old=\'red\' -c color.diff.new=\'green\'';
+    config = '-c color.diff.plain=\'normal\' -c color.diff.meta=\'normal bold\' -c color.diff.old=\'red\' -c color.diff.new=\'green\' -c color.diff.whitespace=\'normal\' -c color.ui=\'always\'';
     gd = '--git-dir=' + '\'' + path_to_repo + '/.git/' + '\''; # Wrap dir in quotation marks for safety (may contain spaces, etc.).
     wt = '--work-tree=' + '\'' + path_to_repo + '\''; # Wrap dir in quotation marks for safety (may contain spaces, etc.).
     ch = commit_hash;
-    c = '--color=always';
     wd = '--word-diff';
     
-    cmd_str = 'git %s %s %s show %s %s %s' % (config,gd,wt,ch,wd,c);
-    #print(cmd_str);
+    cmd_str = 'git %s %s %s show %s %s' % (config,gd,wt,ch,wd);
+    print(cmd_str);
     
     sp = subprocess.Popen(cmd_str,
                           stdout=subprocess.PIPE,
