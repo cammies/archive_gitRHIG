@@ -230,9 +230,6 @@ def get_changed_lines_info(file_diff_lines):
     return (num_lines_inserted, num_lines_deleted, num_lines_modified);
 
 
-text_file = open("./anssssi.txt", "w");
-
-    
 # Calculate number of lines inserted, deleted, modified and the combined total for these.
 def get_commit_changes(commit):
     
@@ -243,7 +240,6 @@ def get_commit_changes(commit):
     
     commit_hash = commit['commit_hash']; 
     gitshow_str = get_gitshow_str(commit_hash);
-    text_file.write(gitshow_str);
 
     files_diff_dict = get_files_diff_dict(gitshow_str);
     
@@ -534,8 +530,6 @@ def main():
     elapsed_time = end - start;
     print("Elapsed Time: " + str(elapsed_time));
     print("Execution Completed.");
-
-    text_file.close()
 
     return;
 
