@@ -162,16 +162,16 @@ KEY_BEGIN = '\x1B\x5B\x31\x6D';
 
 KEY_END = '\x1B\x5B\x6D';
 
-ADDITION_REGEX = re.compile(ur'\x1B\x5B\x33\x32\x6D\x7B\x2B.*?\x2B\x7D\x1B\x5B\x6D',
+ADDITION_REGEX = re.compile(ur'\x1B\x5B\x33\x32\x6D\x7B\x2B[\s\S]*[\S]+[\s\S]*\x2B\x7D\x1B\x5B\x6D',
                             re.UNICODE);
 
-ADDITION_START_END_REGEX = re.compile(ur'^\x1B\x5B\x33\x32\x6D\x7B\x2B.*?\x2B\x7D\x1B\x5B\x6D$',
+ADDITION_START_END_REGEX = re.compile(ur'^\x1B\x5B\x33\x32\x6D\x7B\x2B[\s\S]*[\S]+[\s\S]*\x2B\x7D\x1B\x5B\x6D$',
                                       re.UNICODE);
 
-REMOVAL_REGEX = re.compile(ur'\x1B\x5B\x33\x31\x6D\x5B\x2D.*?\x2D\x5D\x1B\x5B\x6D',
+REMOVAL_REGEX = re.compile(ur'\x1B\x5B\x33\x31\x6D\x5B\x2D[\s\S]*[\S]+[\s\S]*\x2D\x5D\x1B\x5B\x6D',
                            re.UNICODE);
 
-REMOVAL_START_END_REGEX = re.compile(ur'^\x1B\x5B\x33\x31\x6D\x5B\x2D.*?\x2D\x5D\x1B\x5B\x6D$',
+REMOVAL_START_END_REGEX = re.compile(ur'^\x1B\x5B\x33\x31\x6D\x5B\x2D[\s\S]*[\S]+[\s\S]*\x2D\x5D\x1B\x5B\x6D$',
                                      re.UNICODE);
 
 
