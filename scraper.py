@@ -139,13 +139,14 @@ def get_gitshow_str(commit_hash):
     
     global path_to_repo;
     
+    config = '-c color.diff.plain=\'normal\' -c color.diff.meta=\'normal bold\' -c color.diff.old=\'red\' -c color.diff.new=\'green\'';
     gd = '--git-dir=' + '\'' + path_to_repo + '/.git/' + '\''; # Wrap dir in quotation marks for safety (may contain spaces, etc.).
     wt = '--work-tree=' + '\'' + path_to_repo + '\''; # Wrap dir in quotation marks for safety (may contain spaces, etc.).
     ch = commit_hash;
     c = '--color=always';
     wd = '--word-diff';
     
-    cmd_str = 'git %s %s show %s %s %s' % (gd,wt,ch,wd,c);
+    cmd_str = 'git %s %s %s show %s %s %s' % (config,gd,wt,ch,wd,c);
     #print(cmd_str);
     
     sp = subprocess.Popen(cmd_str,
@@ -341,6 +342,7 @@ def get_commits():
     
     gitlog_format = '\x1e' + '\x1f'.join(GITLOG_FIELDS) + '\x1f'; # Last '%x1f' accounts for files info field string.
     
+    config = '-c color.ui=\'false\'';
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
     wt = '--work-tree=\'' + path_to_repo + '\'';
     a = '--since=\'' + since_dt_str + '\'';
@@ -351,7 +353,7 @@ def get_commits():
     f = '--format=' + gitlog_format;
     p = '\'' + sh.add_path_to_uri(path_to_repo, path_in_repo) + '\'';
     
-    cmd_str = 'git %s %s log %s %s %s %s %s %s' % (gd,wt,a,b,s,sw,f,p);
+    cmd_str = 'git %s %s %s log %s %s %s %s %s %s' % (config,gd,wt,a,b,s,sw,f,p);
     #print(cmd_str)
 
     sp = subprocess.Popen(cmd_str,
