@@ -284,7 +284,7 @@ def get_since_dt_str(since_dt_str):
             dt = dtparser.parse(since_dt_str);
             since_dt_str = datetime.datetime.strftime(dt, '%Y-%m-%dT%H:%M:%SZ');
         except:
-            print(get_warning_str("Malformed since date \'" + since_dt_str + "\'"));
+            print(get_warning_str("Malformed \'since\' date \'" + since_dt_str + "\'"));
             since_dt_str = '';#get_utc_begin_str();
     else:
         since_dt_str = '';#get_utc_begin_str();
@@ -300,7 +300,7 @@ def get_until_dt_str(until_dt_str):
             dt = dtparser.parse(until_dt_str);
             until_dt_str = datetime.datetime.strftime(dt, '%Y-%m-%dT%H:%M:%SZ');
         except:
-            print(get_warning_str("Malformed until date \'" + until_dt_str + "\'"));
+            print(get_warning_str("Malformed \'until\' date \'" + until_dt_str + "\'"));
             until_dt_str = '';#get_utc_now_str();
     else:
         until_dt_str = '';#get_utc_now_str();
@@ -354,9 +354,8 @@ def get_wd(directory_str):
     return directory;
 
 
-# Get repo URI and paths in repo.
-# Example syntax: 'https://github.com/{username}/{reponame}=,{dirname}'.
-def parse_source(source_str):
+# Parse local path source str.
+def parse_local_path_source(source_str):
     
     source = dict();
     
@@ -372,46 +371,35 @@ def parse_source(source_str):
         repo_uri = parsed_uri.path;
 
         query_dict = urlparse.parse_qs(parsed_uri.query);
-        for field in query_dict: # Populate paths_in_repo.
+        for field in query_dict: # Get query fields...
 
             if (field == 'path'):
                 paths_in_repo = query_dict[field];
             elif (field == 'label'):
-                labels_for_repo = tuple(list(set(query_dict[field]))); # Eliminate and duplicates.
+                labels_for_repo = query_dict[field];
             elif (field == 'since'):
                 since_dt = query_dict[field];
             elif (field == 'until'):
                 until_dt = query_dict[field];
             else:
-                print(get_warning_str("No such query field \'" + str(field) + "\'"));
+                print(get_warning_str("No such query field \'" + field + "\'"));
         
         source['uri'] = repo_uri;
-        source['paths_in_repo'] = paths_in_repo;
-        source['labels_for_repo'] = labels_for_repo;
+        source['paths_in_repo'] = list(set(paths_in_repo)); # Eliminate and duplicates.
+        source['labels_for_repo'] = tuple(list(set(labels_for_repo))); # Eliminate and duplicates.
+        source['since'] = list(set(since_dt)); # Eliminate and duplicates.
+        source['until'] = list(set(until_dt)); # Eliminate and duplicates.
 
-        if (len(since_dt) > 1):
-            print(get_warning_str("Too many since dates"));
-        elif (len(since_dt) == 1):
-            source['since'] = since_dt[0];
-        else:
-            source['since'] = '';
-        
-        if (len(until_dt) > 1):
-            print(get_warning_str("Too many until dates"));
-        elif (len(until_dt) == 1):
-            source['until'] = until_dt[0];
-        else:
-            source['until'] = '';
-    
+
     except:
-        print(get_warning_str("Malformed source string \'" + str(source_str) + "\'"));
+        print(get_warning_str("Malformed source string \'" + source_str + "\'"));
         source['uri'] = '';
     
     return source;
 
 
-# Process input file.
-def process_infile(infile):
+# Process local path source input file.
+def process_source_infile(infile):
     
     with open(infile, 'r') as sources_file:
         sources = sources_file.read().replace('\n', '');
@@ -428,10 +416,10 @@ def get_local_path_sources(sources_str):
     sources = list();
     for source in raw_sources:
         
-        source_dict = parse_source(source);
+        source_dict = parse_local_path_source(source);
         if (os.path.isfile(source_dict['uri'])): # If source is a file...
-            file_sources_str = process_infile(source_dict['uri']); # Source str.
-            sources_from_file = get_sources(file_sources_str); # List of dicts.
+            file_sources_str = process_source_infile(source_dict['uri']); # Source str.
+            sources_from_file = get_local_path_sources(file_sources_str); # Recursive call (returns list of dicts).
             for i in range (0, len(sources_from_file)):
                 sources_from_file[i]['paths_in_repo'] = sources_from_file[i]['paths_in_repo'] + source_dict['paths_in_repo'];
                 sources_from_file[i]['labels_for_repo'] = sources_from_file[i]['labels_for_repo'] + source_dict['labels_for_repo'];
@@ -476,8 +464,8 @@ def get_url_sources(sources_str):
     for source in raw_sources:
         
         if (os.path.isfile(source)): # If source is a file...
-            file_sources_str = process_infile(source); # Source str.
-            sources_from_file = get_sources(file_sources_str); # List of dicts.
+            file_sources_str = process_source_infile(source); # Source str.
+            sources_from_file = get_url_sources(file_sources_str); # Recursive call (returns list of dicts).
             sources = sources + sources_from_file;
         else:
             sources.append(source);
