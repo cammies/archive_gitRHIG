@@ -95,7 +95,7 @@ def echo_args():
     arg_paths_in_repo = ", ".join(["\'" + p + "\'" for p in args.paths_in_repo]) if (args.paths_in_repo) else "\'.\'";
     
     print("[global] Anonymize: " + str(args.anonymize));
-    print("[global] Data store: " + args.data_store);
+    print("[global] Data store: \'" + args.data_store + '\'');
     print("[global] Paths: " + arg_paths_in_repo);
     print("[global] Since: " + args.since);
     print("[global] Until: " + args.until);
@@ -338,7 +338,7 @@ def get_commits():
                      '%cn', '%ce', '%ct',
                      '%s'];
     
-    gitlog_format = '%x1e' + '%x1f'.join(GITLOG_FIELDS) + '%x1f'; # Last '%x1f' accounts for files info field string.
+    gitlog_format = '\x1e' + '\x1f'.join(GITLOG_FIELDS) + '\x1f'; # Last '%x1f' accounts for files info field string.
     
     config = '-c color.ui=\'false\'';
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
@@ -474,8 +474,6 @@ def main():
     args = process_args();
     print("Checking arguments");
     check_args();
-    print("Done.");
-    print('');
     
     echo_args();
     print('');
