@@ -138,14 +138,16 @@ def get_commit_filenames(files_str):
 def get_gitshow_str(commit_hash):
     
     global path_to_repo;
+    global path_in_repo;
     
     config = '-c color.diff.plain=\'normal\' -c color.diff.meta=\'normal bold\' -c color.diff.old=\'red\' -c color.diff.new=\'green\' -c color.diff.whitespace=\'normal\' -c color.ui=\'always\'';
     gd = '--git-dir=' + '\'' + path_to_repo + '/.git/' + '\''; # Wrap dir in quotation marks for safety (may contain spaces, etc.).
     wt = '--work-tree=' + '\'' + path_to_repo + '\''; # Wrap dir in quotation marks for safety (may contain spaces, etc.).
     ch = commit_hash;
     wd = '--word-diff';
+    p = '-- \'' + path_in_repo + '\'';
     
-    cmd_str = 'git %s %s %s show %s %s' % (config,gd,wt,ch,wd);
+    cmd_str = 'git %s %s %s show %s %s %s' % (config,gd,wt,ch,wd,p);
     #print(cmd_str);
     
     sp = subprocess.Popen(cmd_str,
@@ -230,7 +232,7 @@ def get_changed_lines_info(file_diff_lines):
 
 
 # Calculate number of lines inserted, deleted, modified and the combined total for these.
-def get_commit_changes(commit):
+def get_commit_lines_changed_info(commit):
     
     commit['num_lines_changed'] = 0;
     commit['num_lines_inserted'] = 0;
@@ -287,6 +289,7 @@ def process_commit_history(gitlog_str):
     field_records = [field_group.strip().split('\x1f') for field_group in field_groups];
     
     commits = [dict(zip(COMMIT_FIELDS, field_record)) for field_record in field_records];
+    #print commits;
     
     commit_count = len(commits);
     for i in range(0, commit_count):
@@ -315,7 +318,7 @@ def process_commit_history(gitlog_str):
         commit['num_files_changed'] = len(commit['filenames']);
         del commit['files_info']; # This field is no longer needed.
         
-        commit = get_commit_changes(commit);#, commit_hash);
+        commit = get_commit_lines_changed_info(commit);#, commit_hash);
         
         commits[i] = commit; # Update commit dict at position index 'i'.
     
@@ -335,7 +338,7 @@ def get_commits():
                      '%cn', '%ce', '%ct',
                      '%s'];
     
-    gitlog_format = '\x1e' + '\x1f'.join(GITLOG_FIELDS) + '\x1f'; # Last '%x1f' accounts for files info field string.
+    gitlog_format = '%x1e' + '%x1f'.join(GITLOG_FIELDS) + '%x1f'; # Last '%x1f' accounts for files info field string.
     
     config = '-c color.ui=\'false\'';
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
@@ -346,10 +349,10 @@ def get_commits():
     stat_width = 1000; # Length of git-log output. (Using insanely-high value to ensure "long" filenames are captured in their entirety.)
     sw = '--stat-width=' + str(stat_width);
     f = '--format=' + gitlog_format;
-    p = '\'' + sh.add_path_to_uri(path_to_repo, path_in_repo) + '\'';
+    p = '-- \'' + path_in_repo + '\'';
     
     cmd_str = 'git %s %s %s log %s %s %s %s %s %s' % (config,gd,wt,a,b,s,sw,f,p);
-    #print(cmd_str)
+    #print(cmd_str);
 
     sp = subprocess.Popen(cmd_str,
                           stdout=subprocess.PIPE,
