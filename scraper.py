@@ -94,11 +94,11 @@ def echo_args():
     
     arg_paths_in_repo = ", ".join(["\'" + p + "\'" for p in args.paths_in_repo]) if (args.paths_in_repo) else "\'.\'";
     
-    print("ANONYMIZE: " + str(args.anonymize));
-    print("DATA_STORE: " + args.data_store);
-    print("PATHS_IN_ALL_REPOS: " + arg_paths_in_repo);
-    print("SINCE: " + args.since);
-    print("UNTIL: " + args.until);
+    print("[global] Anonymize: " + str(args.anonymize));
+    print("[global] Data store: " + args.data_store);
+    print("[global] Paths: " + arg_paths_in_repo);
+    print("[global] Since: " + args.since);
+    print("[global] Until: " + args.until);
 
 
 # Extract repo owner and name from remote origin URL.
@@ -294,7 +294,7 @@ def process_commit_history(gitlog_str):
     commit_count = len(commits);
     for i in range(0, commit_count):
 
-        print("Processing commit " + str(i+1) + " of " + str(commit_count));
+        print("[git] Processing commit " + str(i+1) + " of " + str(commit_count));
         
         commit = commits[i];
 
@@ -354,6 +354,7 @@ def get_commits():
     cmd_str = 'git %s %s %s log %s %s %s %s %s %s' % (config,gd,wt,a,b,s,sw,f,p);
     #print(cmd_str);
 
+    print("[git] Scraping repository history");
     sp = subprocess.Popen(cmd_str,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
@@ -447,9 +448,9 @@ def process_project():
         
         proc_end_time = datetime.datetime.now();
         proc_elapsed_time = proc_end_time - proc_start_time;
-        print("Processing Time: " + str(proc_elapsed_time));
+        print("[git] Processing time: " + str(proc_elapsed_time));
         push_commit_records(commits_df, 'commits', args.data_store);
-        print("Commit records imported into data store.");
+        print("[pandas] Importing commit records into data store");
         
         return True;    
 
@@ -470,9 +471,8 @@ def main():
     global since_dt_str;
     global until_dt_str;
 
-    print('');
     args = process_args();
-    print("Checking arguments...");
+    print("Checking arguments");
     check_args();
     print("Done.");
     print('');
@@ -489,7 +489,7 @@ def main():
         source = args.sources[i];
         
         path_to_repo = source['uri'];
-        print("LOCAL_PATH: " + path_to_repo);
+        print("[instance] Local path: \'" + path_to_repo + '\'');
         path_to_repo = os.path.abspath(path_to_repo);
         
         remote_origin_url = sh.get_remote_origin_url(path_to_repo);
@@ -525,24 +525,22 @@ def main():
         for j in range(0, num_paths): # For each path in repo...
             
             path_in_repo = paths[j];
-            print("Processing path " + str(j+1) + " of " + str(num_paths));
-            print("PATH: \'" + path_in_repo + "\'");
-            print("SINCE: " + since_dt_str);
-            print("UNTIL: " + until_dt_str);
-            print("Scraping repository history...");
+            print("Processing repository path " + str(j+1) + " of " + str(num_paths));
+            print("[instance] Path: \'" + path_in_repo + "\'");
+            print("[instance] Since: " + since_dt_str);
+            print("[instance] Until: " + until_dt_str);
             #proc_start_time = datetime.datetime.now();
             process_project();
             #proc_end_time = datetime.datetime.now();
             #proc_elapsed_time = proc_end_time - proc_start_time;
             #print("Processing Time: " + str(proc_elapsed_time));
-            print("Done.");
+            #print("Done.");
         
         print('');
     
     end = datetime.datetime.now();
     elapsed_time = end - start;
-    print("Elapsed Time: " + str(elapsed_time));
-    print("Execution Completed.");
+    print("Elapsed time: " + str(elapsed_time));
 
     return;
 
