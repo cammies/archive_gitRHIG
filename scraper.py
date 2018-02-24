@@ -11,6 +11,7 @@ import re; # Regular expressions.
 import subprocess; # Invoke git applications.
 import sys; # Script termination.
 import time; # Ststem time.
+import tqdm; # Progress status.
 import urlparse; # URL parsing.
 
 
@@ -292,6 +293,7 @@ def process_commit_history(gitlog_str):
     commits = [dict(zip(COMMIT_FIELDS, field_record)) for field_record in field_records];
     #print commits;
     
+    t1 = datetime.datetime.now();
     commit_count = len(commits);
     for i in range(0, commit_count):
         
@@ -323,9 +325,13 @@ def process_commit_history(gitlog_str):
         commit = get_commit_lines_changed_info(commit);#, commit_hash);
         
         commits[i] = commit; # Update commit dict at position index 'i'.
-        sys.stdout.write("[git] Processing commits: [%-20s] %d%%" % ('='*i, i/commit_count))
+
+        j = float(i + 1) / float(commit_count);
+        t2 = datetime.datetime.now();
+        t = t2 - t1;
+        t = (datetime.datetime.min + t).time();
+        sys.stdout.write(("[git] Scraping commits: {0:.1f}% of " + str(commit_count) + " in {1}").format(100.0*j, t.strftime('%H:%M:%S')));
         sys.stdout.flush();
-        time.sleep(0.25);
 
     print('');
     
@@ -361,7 +367,6 @@ def get_commits():
     cmd_str = 'git %s %s %s log %s %s %s %s %s %s' % (config,gd,wt,a,b,s,sw,f,p);
     #print(cmd_str);
 
-    print("[git] Scraping repository history");
     sp = subprocess.Popen(cmd_str,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
@@ -446,16 +451,12 @@ def push_commit_records(commits_df, title, destination):
 # Process info for single project.
 def process_project():
     
-    proc_start_time = datetime.datetime.now();
     commits = get_commits();
 
     if (commits):
 
         commits_df = construct_commits_df(commits);
         
-        proc_end_time = datetime.datetime.now();
-        proc_elapsed_time = proc_end_time - proc_start_time;
-        print("[git] Processing time: " + str(proc_elapsed_time));
         push_commit_records(commits_df, 'commits', args.data_store);
         print("[pandas] Importing commit records into data store");
         
