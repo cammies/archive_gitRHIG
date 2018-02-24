@@ -499,12 +499,23 @@ def main():
         paths = list(set(paths)); # Eliminate any duplicates.
         paths = paths if paths else ['.'];
         
-        labels_for_repo = tuple(list(set(args.labels + source['labels_for_repo'])));
+        labels_for_repo = args.labels + source['labels_for_repo'];
+        labels_for_repo = tuple(list(set(labels_for_repo))); # Eliminate any duplicates.
 
-        since = sh.get_since_dt_str(source['since']);
+        since = '';
+        if (len(source['since']) > 1):
+            print(sh.get_warning_str("Too many \'since\' dates"));
+        elif (len(source['since']) == 1):
+            since = source['since'][0]; # Only elem in list.
+        since = sh.get_since_dt_str(since) is since else since; # To potentially prevent unnecessary function call.
         since_dt_str = since if since else args.since;
         
-        until = sh.get_until_dt_str(source['until']);
+        until = '';
+        if (len(source['until']) > 1):
+            print(sh.get_warning_str("Too many \'until\' dates"));
+        elif (len(source['until']) == 1):
+            until = source['until'][0]; # Only elem in list.
+        until = sh.get_until_dt_str(until) if until else until; # To potentially prevent unnecessary function call.
         until_dt_str = until if until else args.until;
 
         num_paths = len(paths);
