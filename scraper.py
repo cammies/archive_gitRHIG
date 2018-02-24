@@ -10,6 +10,7 @@ import pandas; # DataFrame handling.
 import re; # Regular expressions.
 import subprocess; # Invoke git applications.
 import sys; # Script termination.
+import time; # Ststem time.
 import urlparse; # URL parsing.
 
 
@@ -293,8 +294,9 @@ def process_commit_history(gitlog_str):
     
     commit_count = len(commits);
     for i in range(0, commit_count):
-
-        print("[git] Processing commit " + str(i+1) + " of " + str(commit_count));
+        
+        sys.stdout.write('\r');
+        #print("[git] Processing commit " + str(i+1) + " of " + str(commit_count));
         
         commit = commits[i];
 
@@ -321,6 +323,11 @@ def process_commit_history(gitlog_str):
         commit = get_commit_lines_changed_info(commit);#, commit_hash);
         
         commits[i] = commit; # Update commit dict at position index 'i'.
+        sys.stdout.write("[git] Processing commits: [%-20s] %d%%" % ('='*i, i/commit_count))
+        sys.stdout.flush();
+        time.sleep(0.25);
+
+    print('');
     
     return commits;
 
