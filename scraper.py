@@ -507,7 +507,7 @@ def main():
             print(sh.get_warning_str("Too many \'since\' dates"));
         elif (len(source['since']) == 1):
             since = source['since'][0]; # Only elem in list.
-        since = sh.get_since_dt_str(since) is since else since; # To potentially prevent unnecessary function call.
+        since = sh.get_since_dt_str(since) if since else since; # To potentially prevent unnecessary function call.
         since_dt_str = since if since else args.since;
         
         until = '';
