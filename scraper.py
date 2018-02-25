@@ -381,7 +381,7 @@ def get_commits():
     p = '-- \'' + path_in_repo + '\'';
     
     cmd_str = 'git %s %s %s log %s %s %s %s %s %s' % (config,gd,wt,a,b,s,sw,f,p);
-    print(cmd_str);
+    #print(cmd_str);
 
     sp = subprocess.Popen(cmd_str,
                           stdout=subprocess.PIPE,
