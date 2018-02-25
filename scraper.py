@@ -11,7 +11,6 @@ import re; # Regular expressions.
 import subprocess; # Invoke git applications.
 import sys; # Script termination.
 import time; # Ststem time.
-import tqdm; # Progress status.
 import urlparse; # URL parsing.
 
 
