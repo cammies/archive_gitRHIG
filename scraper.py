@@ -21,12 +21,12 @@ args = None; # For script arguments object.
 
 ds_df = None; # Data store DataFrame.
 
+path_to_repo = ''; # Local environment path to repository.
+
 repo_owner = ''; # Identifier for repository owner.
 repo_name = ''; # Identifier for repository name.
 path_in_repo = ''; # Path in repository commit log refers to.
 labels_for_repo = list();
-
-path_to_repo = ''; # Local environment path to repository.
 
 
 # Process script arguments.
@@ -161,21 +161,32 @@ def get_gitshow_str(commit_hash):
     return git_show_str;
 
 
-KEY_BEGIN = '\x1B\x5B\x31\x6D';
+#KEY_BEGIN = '\x1B\x5B\x31\x6D';
 
-KEY_END = '\x1B\x5B\x6D';
+#KEY_END = '\x1B\x5B\x6D';
 
-ADDITION_REGEX = re.compile(ur'\x1B\x5B\x33\x32\x6D\x7B\x2B[\s\S]*[\S]+[\s\S]*\x2B\x7D\x1B\x5B\x6D',
+KEY_BEGIN = '\x1B[1m';
+KEY_END = '\x1B[m';
+ADDITION_REGEX = re.compile(ur'\x1B\[32m\{\+[\s\S]*[\S]+[\s\S]*\+\}\x1B\[m',
                             re.UNICODE);
-
-ADDITION_START_END_REGEX = re.compile(ur'^\x1B\x5B\x33\x32\x6D\x7B\x2B[\s\S]*[\S]+[\s\S]*\x2B\x7D\x1B\x5B\x6D$',
+ADDITION_START_END_REGEX = re.compile(ur'^\x1B\[32m\{\+[\s\S]*[\S]+[\s\S]*\+\}\x1B\[m$',
                                       re.UNICODE);
-
-REMOVAL_REGEX = re.compile(ur'\x1B\x5B\x33\x31\x6D\x5B\x2D[\s\S]*[\S]+[\s\S]*\x2D\x5D\x1B\x5B\x6D',
+REMOVAL_REGEX = re.compile(ur'\x1B\[31m\[-[\s\S]*[\S]+[\s\S]*-\]\x1B\[m',
                            re.UNICODE);
-
-REMOVAL_START_END_REGEX = re.compile(ur'^\x1B\x5B\x33\x31\x6D\x5B\x2D[\s\S]*[\S]+[\s\S]*\x2D\x5D\x1B\x5B\x6D$',
+REMOVAL_START_END_REGEX = re.compile(ur'^\x1B\[31m\[-[\s\S]*[\S]+[\s\S]*-\]\x1B\[m$',
                                      re.UNICODE);
+
+#ADDITION_REGEX = re.compile(ur'\x1B\x5B\x33\x32\x6D\x7B\x2B[\s\S]*[\S]+[\s\S]*\x2B\x7D\x1B\x5B\x6D',
+#                            re.UNICODE);
+
+#ADDITION_START_END_REGEX = re.compile(ur'^\x1B\x5B\x33\x32\x6D\x7B\x2B[\s\S]*[\S]+[\s\S]*\x2B\x7D\x1B\x5B\x6D$',
+#                                      re.UNICODE);
+
+#REMOVAL_REGEX = re.compile(ur'\x1B\x5B\x33\x31\x6D\x5B\x2D[\s\S]*[\S]+[\s\S]*\x2D\x5D\x1B\x5B\x6D',
+#                           re.UNICODE);
+
+#REMOVAL_START_END_REGEX = re.compile(ur'^\x1B\x5B\x33\x31\x6D\x5B\x2D[\s\S]*[\S]+[\s\S]*\x2D\x5D\x1B\x5B\x6D$',
+#                                     re.UNICODE);
 
 
 #
@@ -293,13 +304,13 @@ def process_commit_history(gitlog_str):
     commits = [dict(zip(COMMIT_FIELDS, field_record)) for field_record in field_records];
     #print commits;
     
-    t1 = datetime.datetime.now();
+    t0_1 = datetime.datetime.now();
     commit_count = len(commits);
     for i in range(0, commit_count):
         
-        sys.stdout.write('\r');
         #print("[git] Processing commit " + str(i+1) + " of " + str(commit_count));
         
+        t1_1 = datetime.datetime.now();
         commit = commits[i];
 
         commit['author_name'] = sh.decode_str(commit['author_name']);
@@ -325,13 +336,20 @@ def process_commit_history(gitlog_str):
         commit = get_commit_lines_changed_info(commit);#, commit_hash);
         
         commits[i] = commit; # Update commit dict at position index 'i'.
-
-        j = float(i + 1) / float(commit_count);
-        t2 = datetime.datetime.now();
-        t = t2 - t1;
+        
+        j = float(i+1)/float(commit_count);
+        t1_2 = datetime.datetime.now();
+        t = t1_2 - t1_1;
         t = (datetime.datetime.min + t).time();
-        sys.stdout.write(("[git] Scraping commits: {0:.1f}% of " + str(commit_count) + " in {1}").format(100.0*j, t.strftime('%H:%M:%S')));
+        sys.stdout.write(("[git] Scraping commits: {0:.1f}% of " + str(commit_count) + " ETA {1}\r").format(100.0*j, t.strftime('%H:%M:%S.%f')[:-3]));
+        #sys.stdout.write('\r');
         sys.stdout.flush();
+    
+    t0_2 = datetime.datetime.now();
+    t = t0_2 - t0_1;
+    t = (datetime.datetime.min + t).time();
+    sys.stdout.flush();
+    sys.stdout.write(("[git] Scraping commits: {0:.1f}% of " + str(commit_count) + " in {1}\r").format(100.0*j, t.strftime('%H:%M:%S.%f')[:-3]));
 
     print('');
     
@@ -463,7 +481,7 @@ def process_project():
         return True;    
 
     else: # Commits list is empty...
-        print(sh.get_warning_str("No relevant commits found"));
+        print('\033[93m' + sh.get_warning_str("No relevant commits found") + '\033[m');
         return False;
 
 
