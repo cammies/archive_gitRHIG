@@ -25,7 +25,7 @@ path_to_repo = ''; # Local environment path to repository.
 repo_owner = ''; # Identifier for repository owner.
 repo_name = ''; # Identifier for repository name.
 path_in_repo = ''; # Path in repository commit log refers to.
-labels_for_repo = None();
+labels_for_repo = None;
 
 
 # Process script arguments.
