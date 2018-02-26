@@ -349,9 +349,9 @@ def process_commit_history(gitlog_str):
     
     t0_2 = datetime.datetime.now();
     t = t0_2 - t0_1;
-    t = (datetime.datetime.min + t).time();
+    #t = (datetime.datetime.min + t).time();
     sys.stdout.write("\r");
-    sys.stdout.write(("[git] Scraping commits: {0:.0f}% (" + str(i+1) + "/" + str(commit_count) + ") in {1}").format(100.0*j, t.strftime('%H:%M:%S.%f')[:-3]));
+    sys.stdout.write(("[git] Scraping commits: {0:.0f}% (" + str(i+1) + "/" + str(commit_count) + ") in {1}").format(100.0*j, t));
 
     print('');
     
