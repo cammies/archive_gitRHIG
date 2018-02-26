@@ -113,9 +113,32 @@ def check_args():
 # Print script argument configurations.
 def echo_args():
     
-    print("DATA_STORE: \'" + args.data_store + "*\'");
+    print("DATA_STORE: \'" + args.data_store + "\'");
     print("SINCE: " + str(args.since));
     print("UNTIL: " + str(args.until));
+
+
+#
+def get_labelled_rows(ds_df):
+
+    if (args.labels):
+
+        drop_these = list();
+        for i in range(0, ds_df.shape[0]): # For each project commit record (row) in data store DataFrame...
+            
+            ds_df_row = ds_df.iloc[i];
+            
+            record_labels_tuple = ast.literal_eval(ds_df_row['labels']);
+            for label in args.labels:
+                if (label not in record_labels_tuple):
+                    drop_these.append(i);
+
+        df = ds_df.drop(drop_these);
+        
+        return df;
+    
+    else:
+        return ds_df;
 
 
 # Determine project (calculated) IDs from data store.
@@ -527,62 +550,67 @@ def main():
     echo_args();
     print('');
     start = datetime.datetime.now();
-    
-    htmlfile = args.data_store + '.html';
-    bokeh.plotting.output_file(htmlfile, title="Project Statistics");
 
-    print("Identifying projects...");
-    project_ids_df = get_project_ids(ds_df);
-    print("Done.");
-    
-    attributes = ['total_num_commits',
-                  #'total_num_files_changed',
-                  'total_num_lines_changed',
-                  'total_num_insertions',
-                  'total_num_deletions',
-                  'total_num_modifications'];
-    dtd_code_labels = list();
-    for dtd_code in args.dt_deltas:
+    ds_df = get_labelled_rows(ds_df);
 
-        dtd_name = DTD_NAMES[dtd_code];
-        dtd_code_labels.append(dtd_name);
-
-    attributes = attributes + dtd_code_labels;
-
-    print("Building project summaries...");
-    project_summaries_df = get_project_summaries_df(ds_df, project_ids_df, attributes);
-    print("Done.");
-    
-    num_projects = project_summaries_df.shape[0];    
-    
-    print("Generating project statistics...");
-    for a in range(0, len(attributes)):
-        attr = attributes[a];
-        
-        process_distribution_figs(attr, project_summaries_df);
-        
-        project_attr_frequency_dist_df = get_project_attr_frequency_dist_df(attr, project_summaries_df);
+    if (not ds_df.empty):
         
         pathname, file_ext = os.path.splitext(args.data_store);
-        dir_name = os.path.dirname(pathname);
-        filename = os.path.basename(pathname);
-        xlsfile = dir_name + '/' + attr + '-all_repos-' + filename + '.xlsx';
-        sh.write_df_to_file(project_attr_frequency_dist_df, attr, xlsfile);
-        xlsfiles.append(xlsfile);
-        #print("ATTRIBUTE: " + attr);
-        #print("Frequency distribution saved to \'" + xlsfile + "\'.");
-    print("Done.");
-    print('');
+        htmlfile = pathname + '.html';
+        bokeh.plotting.output_file(htmlfile, title="Project Statistics");
 
-    print("SPREADSHEET_PATHS:");
-    for xlsfile in xlsfiles:
-        print("-> " + xlsfile);
-    print('');
+        print("Identifying projects...");
+        project_ids_df = get_project_ids(ds_df);
+        print("Done.");
+        
+        attributes = ['total_num_commits',
+                      #'total_num_files_changed',
+                      'total_num_lines_changed',
+                      'total_num_insertions',
+                      'total_num_deletions',
+                      'total_num_modifications'];
+        dtd_code_labels = list();
+        for dtd_code in args.dt_deltas:
 
-    bokeh.io.save(bokeh.layouts.column(figs_list));
-    print("HTML_PATH:");
-    print("-> " + htmlfile);
-    print('');
+            dtd_name = DTD_NAMES[dtd_code];
+            dtd_code_labels.append(dtd_name);
+
+        attributes = attributes + dtd_code_labels;
+
+        print("Building project summaries...");
+        project_summaries_df = get_project_summaries_df(ds_df, project_ids_df, attributes);
+        print("Done.");
+        
+        num_projects = project_summaries_df.shape[0];    
+        
+        print("Generating project statistics...");
+        for a in range(0, len(attributes)):
+            attr = attributes[a];
+            
+            process_distribution_figs(attr, project_summaries_df);
+            
+            project_attr_frequency_dist_df = get_project_attr_frequency_dist_df(attr, project_summaries_df);
+            
+            pathname, file_ext = os.path.splitext(args.data_store);
+            dir_name = os.path.dirname(pathname);
+            filename = os.path.basename(pathname);
+            xlsfile = dir_name + '/' + attr + '-all_repos-' + filename + '.xlsx';
+            sh.write_df_to_file(project_attr_frequency_dist_df, attr, xlsfile);
+            xlsfiles.append(xlsfile);
+            #print("ATTRIBUTE: " + attr);
+            #print("Frequency distribution saved to \'" + xlsfile + "\'.");
+        print("Done.");
+        print('');
+
+        print("SPREADSHEET_PATHS:");
+        for xlsfile in xlsfiles:
+            print("-> " + xlsfile);
+        print('');
+
+        bokeh.io.save(bokeh.layouts.column(figs_list));
+        print("HTML_PATH:");
+        print("-> " + htmlfile);
+        print('');
 
     end = datetime.datetime.now();
     elapsed_time = end - start;
