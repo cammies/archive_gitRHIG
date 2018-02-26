@@ -382,13 +382,14 @@ def update_local_repo(repo_url):
         os.makedirs(abspath_to_repo);
         clone_repo = True;
     elif (not sh.is_repo_root(abspath_to_repo)): # Local path to repo is not a repo directory...
-        clone_repo = True;
+        print(sh.get_warning_str("Destination path \'" + abspath_to_repo + "\' already exists and is not an empty directory"));
+        return;
     
     url = get_repo_ssh_url(repo_url);
     
     if (clone_repo): # Clone repo...
         
-        print("Cloning repo...");
+        #print("Cloning repo...");
         
         if (args.bare):
             

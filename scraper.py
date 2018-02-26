@@ -25,7 +25,7 @@ path_to_repo = ''; # Local environment path to repository.
 repo_owner = ''; # Identifier for repository owner.
 repo_name = ''; # Identifier for repository name.
 path_in_repo = ''; # Path in repository commit log refers to.
-labels_for_repo = list();
+labels_for_repo = None();
 
 
 # Process script arguments.
@@ -301,16 +301,12 @@ def process_commit_history(gitlog_str):
     field_records = [field_group.strip().split('\x1f') for field_group in field_groups];
     
     commits = [dict(zip(COMMIT_FIELDS, field_record)) for field_record in field_records];
-    #print commits;
-    #print("ME!!!")
     
     t0_1 = datetime.datetime.now();
+    j = 0;
     commit_count = len(commits);
     for i in range(0, commit_count):
         
-        #print("[git] Processing commit " + str(i+1) + " of " + str(commit_count));
-        
-        t1_1 = datetime.datetime.now();
         commit = commits[i];
 
         commit['author_name'] = sh.decode_str(commit['author_name']);
@@ -338,20 +334,14 @@ def process_commit_history(gitlog_str):
         commits[i] = commit; # Update commit dict at position index 'i'.
         
         j = float(i+1)/float(commit_count);
-        t1_2 = datetime.datetime.now();
-        t = t1_2 - t1_1;
-        t = (datetime.datetime.min + t).time();
-        #print("Processing commit " + str(i+1))
-        #sys.stdout.write('\r');
         sys.stdout.write("\r");
-        sys.stdout.write(("[git] Scraping commits: {0:.0f}% (" + str(i+1) + "/" + str(commit_count) + ")").format(100.0*j));
+        sys.stdout.write(("[git] Scraping commits: {0}% (" + str(i+1) + "/" + str(commit_count) + ")").format(int(100.0*j)));
         sys.stdout.flush();
     
     t0_2 = datetime.datetime.now();
     t = t0_2 - t0_1;
-    #t = (datetime.datetime.min + t).time();
     sys.stdout.write("\r");
-    sys.stdout.write(("[git] Scraping commits: {0:.0f}% (" + str(i+1) + "/" + str(commit_count) + ") in {1}").format(100.0*j, t));
+    sys.stdout.write(("[git] Scraping commits: {0}% (" + str(i+1) + "/" + str(commit_count) + ") in {1}").format(int(100.0*j), t));
 
     print('');
     

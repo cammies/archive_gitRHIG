@@ -519,7 +519,7 @@ def load_commits_data_store(data_store):
 
     try:
         
-        ds_xlsx = pandas.ExcelFile(data_store); # Load data store.
+        ds_xlsx = pandas.ExcelFile(data_store); # Load spreadsheet file.
         ds_df = ds_xlsx.parse(); # Import data store to DataFrame.
         
         for column_label in COLUMN_LABELS: # Ensure each column name in DataFrame is what is expected in commits data store...
@@ -536,24 +536,27 @@ def load_commits_data_store(data_store):
 # Load data store from spreadsheet file.
 def load_repo_files_data_store(data_store):
     
-    try:
-        ds_xls = pandas.ExcelFile(data_store); # Load spreadsheet file.
-        ds_df = ds_xls.parse(); # Import spreadsheet file to DataFrame.
-    except:
-        return None;
-    
     COLUMN_LABELS = ['repo_owner', 'repo_name',
                      'path_in_repo', 'filename',
+                     'labels',
                      'commit_hash',
                      'author_name', 'author_email', 'author_epoch',
                      'committer_name', 'committer_email', 'committer_epoch',
                      'num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
     
-    for column_label in COLUMN_LABELS:
+    try:
         
-        if (column_label not in ds_df.columns):
-            return None;
+        ds_xlsx = pandas.ExcelFile(data_store); # Load spreadsheet file.
+        ds_df = ds_xlsx.parse(); # Import spreadsheet file to DataFrame.
+        
+        for column_label in COLUMN_LABELS:
+            
+            if (column_label not in ds_df.columns):
+                return None;
+            
+        return ds_df;
     
-    return ds_df;
+    except:
+        return None;
 
 
