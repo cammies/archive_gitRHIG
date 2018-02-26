@@ -160,9 +160,9 @@ def get_gitshow_str(commit_hash):
     return git_show_str;
 
 
-#KEY_BEGIN = '\x1B\x5B\x31\x6D';
+KEY_BEGIN = '\x1B\x5B\x31\x6D';
 
-#KEY_END = '\x1B\x5B\x6D';
+KEY_END = '\x1B\x5B\x6D';
 
 KEY_BEGIN = '\x1B[1m';
 KEY_END = '\x1B[m';
@@ -302,6 +302,7 @@ def process_commit_history(gitlog_str):
     
     commits = [dict(zip(COMMIT_FIELDS, field_record)) for field_record in field_records];
     #print commits;
+    #print("ME!!!")
     
     t0_1 = datetime.datetime.now();
     commit_count = len(commits);
@@ -340,13 +341,16 @@ def process_commit_history(gitlog_str):
         t1_2 = datetime.datetime.now();
         t = t1_2 - t1_1;
         t = (datetime.datetime.min + t).time();
-        sys.stdout.write(("[git] Scraping commits: {0:.0f}% (" + str(i+1) + "/" + str(commit_count) + ") \r\x1b[K").format(100.0*j));
+        #print("Processing commit " + str(i+1))
+        #sys.stdout.write('\r');
+        sys.stdout.write("\r");
+        sys.stdout.write(("[git] Scraping commits: {0:.0f}% (" + str(i+1) + "/" + str(commit_count) + ")").format(100.0*j));
         sys.stdout.flush();
     
     t0_2 = datetime.datetime.now();
     t = t0_2 - t0_1;
     t = (datetime.datetime.min + t).time();
-    sys.stdout.flush();
+    sys.stdout.write("\r");
     sys.stdout.write(("[git] Scraping commits: {0:.0f}% (" + str(i+1) + "/" + str(commit_count) + ") in {1}").format(100.0*j, t.strftime('%H:%M:%S.%f')[:-3]));
 
     print('');
@@ -369,7 +373,7 @@ def get_commits():
     
     gitlog_format = '\x1e' + '\x1f'.join(GITLOG_FIELDS) + '\x1f'; # Last '\x1f' accounts for files info field string.
     
-    config = '';#'-c color.ui=\'false\'';
+    config = '-c color.ui=\'false\'';
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
     wt = '--work-tree=\'' + path_to_repo + '\'';
     a = '--since=\'' + since_dt_str + '\'';
