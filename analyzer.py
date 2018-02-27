@@ -560,7 +560,9 @@ def main():
     if (not ds_df.empty):
         
         pathname, file_ext = os.path.splitext(args.data_store);
-        htmlfile = pathname + '.html';
+        dir_name = args.directory if args.directory else os.path.dirname(pathname);
+        filename = os.path.basename(pathname);
+        htmlfile = dir_name + '/' + filename + '.html';
         bokeh.plotting.output_file(htmlfile, title="Project Statistics");
 
         print("Identifying projects...");
