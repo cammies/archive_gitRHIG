@@ -40,6 +40,7 @@ def process_args():
     argparser = argparse.ArgumentParser();
     
     argparser.add_argument('--data-store', help="input data store", type=str);
+    argparser.add_argument('-d','--directory', help="runtime working directory", type=str);
     argparser.add_argument('--dt-deltas', help="which datetime deltas to consider", type=str);
     argparser.add_argument('--labels', help="label commit records", type=str);
     argparser.add_argument('--since', help="analyze information about commits records more recent than a specific date", type=str);
@@ -87,6 +88,9 @@ def check_args():
     else:
         sys.exit("Must specify an input data store!");
 
+    # Working directory.
+    args.directory = sh.get_wd(args.directory);
+    
     # Get valid DTDs.
     dtd_codes = list();
     if (args.dt_deltas):
@@ -419,7 +423,7 @@ def get_frequency_dist_df(attr, project_summaries_df, interval_df):
     dfw = df.drop(['>=', '<'], axis=1);    
     
     pathname, file_ext = os.path.splitext(args.data_store);
-    dir_name = os.path.dirname(pathname);
+    dir_name = args.directory if args.directory else os.path.dirname(pathname);
     filename = os.path.basename(pathname);
     xlsfile = dir_name + '/' + attr + '-' + filename + '.xlsx';
     sh.write_df_to_file(dfw, "frequency_distribution", xlsfile);
@@ -592,7 +596,7 @@ def main():
             project_attr_frequency_dist_df = get_project_attr_frequency_dist_df(attr, project_summaries_df);
             
             pathname, file_ext = os.path.splitext(args.data_store);
-            dir_name = os.path.dirname(pathname);
+            dir_name = args.directory if args.directory else os.path.dirname(pathname);
             filename = os.path.basename(pathname);
             xlsfile = dir_name + '/' + attr + '-all_repos-' + filename + '.xlsx';
             sh.write_df_to_file(project_attr_frequency_dist_df, attr, xlsfile);
