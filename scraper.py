@@ -126,6 +126,7 @@ def extract_repo_owner_and_name(remote_origin_url):
 def get_commit_filenames(files_str):
     
     filenames_regex = r'\s+(.*)\s+\|\s+[a-zA-Z0-9]+';
+    #filenames_regex = r'\s+(.*[^\s]+)\s+\|\s+[a-zA-Z0-9]+';
     
     filenames = re.findall(filenames_regex, files_str);
     
