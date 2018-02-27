@@ -126,7 +126,7 @@ $ python analyzer.py --data-store {ds_object}
 - urlparse
 - \*[xlwt](https://pypi.python.org/pypi/xlwt)\*
 - \*[openpyxl](https://pypi.python.org/pypi/openpyxl)\*
-- [xlswriter](https://pypi.python.org/pypi/XlsxWriter/)\*
+- [xlsxwriter](https://pypi.python.org/pypi/XlsxWriter/)\*
 
 \* May require install
 
