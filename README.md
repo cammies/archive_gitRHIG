@@ -124,8 +124,7 @@ $ python analyzer.py --data-store {ds_object}
 - textwrap
 - time
 - urlparse
-- \*[xlwt](https://pypi.python.org/pypi/xlwt)\*
-- \*[openpyxl](https://pypi.python.org/pypi/openpyxl)\*
+- [xlrd](https://pypi.python.org/pypi/xlrd)\*
 - [xlsxwriter](https://pypi.python.org/pypi/XlsxWriter/)\*
 
 \* May require install
