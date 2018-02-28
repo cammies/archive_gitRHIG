@@ -433,42 +433,48 @@ def get_local_path_sources(sources_str):
 #
 def get_repo_local_paths(sources_str):
     
-    sources = get_local_path_sources(sources_str);
-
     repo_local_paths = list();
-    for source_dict in sources:
+    
+    if (sources_str):
+        
+        sources = get_local_path_sources(sources_str);
 
-        uri = source_dict['uri'];
-        if (is_local_path(uri)):
+        for source_dict in sources:
+
+            uri = source_dict['uri'];
+            if (is_local_path(uri)):
+                        
+                if (is_repo_root(uri)):
                     
-            if (is_repo_root(uri)):
+                    if (source_dict not in repo_local_paths):
+                        repo_local_paths.append(source_dict);
+                else:
+                    print(get_warning_str("\'" + uri + "\' does not refer to a git repository"));
                 
-                if (source_dict not in repo_local_paths):
-                    repo_local_paths.append(source_dict);
             else:
-                print(get_warning_str("\'" + uri + "\' does not refer to a git repository"));
-            
-        else:
-            print(get_warning_str("Malformed URI \'" + uri + "\'"));
+                print(get_warning_str("Malformed URI \'" + uri + "\'"));
 
     return repo_local_paths;
-                
+ 
 
 # Return list of source dicts.
 def get_url_sources(sources_str):
 
-    raw_sources = split_str(';', sources_str); # Multiple URIs are semi-colon separated.
-    raw_sources = list(set(raw_sources)); # Eliminate any duplicates.
-    
     sources = list();
-    for source in raw_sources:
+
+    if (sources_str):
         
-        if (os.path.isfile(source)): # If source is a file...
-            file_sources_str = process_source_infile(source); # Source str.
-            sources_from_file = get_url_sources(file_sources_str); # Recursive call (returns list of dicts).
-            sources = sources + sources_from_file;
-        else:
-            sources.append(source);
+        raw_sources = split_str(';', sources_str); # Multiple URIs are semi-colon separated.
+        raw_sources = list(set(raw_sources)); # Eliminate any duplicates.
+        
+        for source in raw_sources:
+            
+            if (os.path.isfile(source)): # If source is a file...
+                file_sources_str = process_source_infile(source); # Source str.
+                sources_from_file = get_url_sources(file_sources_str); # Recursive call (returns list of dicts).
+                sources = sources + sources_from_file;
+            else:
+                sources.append(source);
 
     return sources;
 
