@@ -443,7 +443,9 @@ def process_project():
     sys.stdout.write("[git] Retrieving commit log: ...");
     sys.stdout.flush();
     t1 = datetime.datetime.now();
+    
     gitlog_str = get_gitlog_str();
+    
     t2 = datetime.datetime.now();
     t = t2 - t1;
     sys.stdout.write("\r");
