@@ -407,13 +407,13 @@ def get_commits_df(gitlog_str):
         j = j + 1;
         k = float(j) / float(num_commits);
         sys.stdout.write("\r");
-        sys.stdout.write(("[git] Scraping commits: {0}% (" + str(j) + "/" + str(num_commits) + ")").format(int(100.0*k)));
+        sys.stdout.write(("[git] Generating commit records: {0}% (" + str(j) + "/" + str(num_commits) + ")").format(int(100.0*k)));
         sys.stdout.flush();
     
     t2 = datetime.datetime.now();
     t = t2 - t1;
     sys.stdout.write("\r");
-    sys.stdout.write(("[git] Scraping commits: {0}% (" + str(j) + "/" + str(num_commits) + ") in {1}").format(int(100.0*k), t));
+    sys.stdout.write(("[git] Generating commit records: {0}% (" + str(j) + "/" + str(num_commits) + "), done in {1}").format(int(100.0*k), t));
 
     print('');
     
@@ -438,8 +438,17 @@ def push_commit_records(commits_df, title, destination):
 
 # Process info for single project.
 def process_project():
-    
+
+    sys.stdout.write("\r");
+    sys.stdout.write("[git] Retrieving commit log: ...");
+    sys.stdout.flush();
+    t1 = datetime.datetime.now();
     gitlog_str = get_gitlog_str();
+    t2 = datetime.datetime.now();
+    t = t2 - t1;
+    sys.stdout.write("\r");
+    sys.stdout.write("[git] Retrieving commit log: done in {0}".format(t));
+    print('');
 
     if (gitlog_str):
 
