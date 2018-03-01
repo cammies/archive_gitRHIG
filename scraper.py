@@ -456,8 +456,19 @@ def process_project():
 
         commits_df = get_commits_df(gitlog_str);
         
+        sys.stdout.write("\r");
+        sys.stdout.write("[pandas] Importing commit records into data store: ...");
+        sys.stdout.flush();
+        
+        t1 = datetime.datetime.now();
+        
         push_commit_records(commits_df, 'commits', args.data_store);
-        print("[pandas] Importing commit records into data store");
+        
+        t2 = datetime.datetime.now();
+        t = t2 - t1;
+        sys.stdout.write("\r");
+        sys.stdout.write("[pandas] Importing commit records into data store: done in {0}".format(t));
+        print('');
         
         return True;    
 
