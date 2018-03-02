@@ -33,6 +33,7 @@ figs_list = list(); # List of distribution figures.
 
 xlsfiles = list(); # Keep track of output XLS filenames.
 
+font_size = "12pt"; # Font size for text in output graphs.
 
 # Process script arguments.
 def process_args():
@@ -298,7 +299,10 @@ attr_labels_dict = {'total_num_commits' : 'Total Number of Commits',
 
 # Plot histogram for some data set.
 def process_histogram(data, xlabel, ylabel):
-        
+    
+    global figs_list;
+    global font_size;
+    
     data_size = len(data);
     
     hist, bin_edges = numpy.histogram(data, density=False);
@@ -311,7 +315,6 @@ def process_histogram(data, xlabel, ylabel):
     
     p.quad(top=hist, bottom=0, left=bin_edges[:-1], right=bin_edges[1:], line_color='black', fill_color='blue');
     
-    font_size = "14pt"
     p.title.align='center';
     p.title.text_font_size=font_size;
     p.xaxis.major_label_text_font_size=font_size;
@@ -319,7 +322,6 @@ def process_histogram(data, xlabel, ylabel):
     p.yaxis.major_label_text_font_size=font_size;
     p.yaxis.axis_label_text_font_size=font_size;
 
-    global figs_list;
     figs_list.append(p);
 
 
@@ -327,6 +329,9 @@ def process_histogram(data, xlabel, ylabel):
 # Inspired by user Amedeo's answer: https://stackoverflow.com/questions/24575869/read-file-and-plot-cdf-in-python.
 def process_cdf(data, xlabel):
 
+    global figs_list;
+    global font_size;
+    
     data_size = len(data);
 
     data_set = sorted(set(data));
@@ -347,7 +352,6 @@ def process_cdf(data, xlabel):
                               y_axis_label=ylabel,
                               y_range=bokeh.models.Range1d(0, 1, bounds='auto'));
    
-    font_size = "16pt"
     p.title.align='center';
     p.title.text_font_size=font_size;
     p.xaxis.major_label_text_font_size=font_size;
@@ -358,7 +362,6 @@ def process_cdf(data, xlabel):
     p.line(bin_edges[0:-1], cdf, line_color='red');
     p.circle(bin_edges[0:-1], cdf, line_color='red', fill_color='red');
 
-    global figs_list;
     figs_list.append(p);
 
 
