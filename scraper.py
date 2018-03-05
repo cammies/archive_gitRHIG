@@ -290,6 +290,7 @@ def get_gitlog_str():
     config = '-c color.ui=\'false\'';
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
     wt = '--work-tree=\'' + path_to_repo + '\'';
+    fh = '--full-history';
     a = '--since=\'' + since_dt_str + '\'';
     b = '--until=\'' + until_dt_str + '\'';
     s = '--stat';
@@ -298,7 +299,7 @@ def get_gitlog_str():
     f = '--format=' + gitlog_format;
     p = '-- \'' + path_in_repo + '\'';
     
-    cmd_str = 'git %s %s %s log %s %s %s %s %s %s' % (config,gd,wt,a,b,s,sw,f,p);
+    cmd_str = 'git %s %s %s log %s %s %s %s %s %s %s' % (config,gd,wt,fh,a,b,s,sw,f,p);
     #print(cmd_str);
 
     sp = subprocess.Popen(cmd_str,
