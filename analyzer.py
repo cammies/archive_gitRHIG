@@ -5,17 +5,18 @@ import argparse; # Script arguments
 import ast;
 import bokeh.io; # Interactive graphs in Jupyter Notebook.
 import bokeh.layouts; # Output HTML column layout.
-import bokeh.models; # Graph y-range.
+import bokeh.models; # Graph y-range, Hover Tool.
 import bokeh.palettes; # Graph color pallettes.
 import bokeh.plotting; # Graph plot handling.
 import datetime;
 import io; # File writing.
-import math;
+#import math;
 import modules.shared as sh;
 import numpy; # CDF, histogram graphs.
 import os; # File, directory handling.
 import pandas; # DataFrame handling.
 import sys; # Script termination.
+import time; # Time processing.
 
 
 # Global variables.
@@ -153,6 +154,73 @@ def get_project_ids(commits_df):
     project_ids_df = project_ids_df.drop_duplicates().reset_index(drop=True);
     
     return project_ids_df;
+
+
+# Plot repository timelines for some data set.
+def process_timelines(df, p, project_index_id):
+        
+    global font_size;
+    
+    data = dict(df);
+    
+    source = bokeh.plotting.ColumnDataSource(data=data);
+    
+    y = [project_index_id for i in range(0, df.shape[0])];
+    
+    p.circle('committer_epoch', y, source=source);
+    p.line('committer_epoch', y, source=source);
+    
+    return p;
+
+
+# Get plot containing development timeline for each repository.
+def get_project_timelines(project_ids_df, ds_df):
+    
+    global figs_list;
+    
+    num_projects = project_ids_df.shape[0];
+    
+    committer_dates = list()
+    for i, row in ds_df.iterrows(): # Format committer dates.
+
+        dt = datetime.datetime.fromtimestamp(float(row["committer_epoch"]));
+        ds_df.set_value(i, 'committer_epoch', dt);
+        
+        committer_dates.append(dt.strftime("%Y-%m-%d %H:%M:%S " + time.tzname[1])); # (Account for Daylight Saving Time.)
+
+    ds_df['committer_date'] = committer_dates; # Add new column for committer dates as strings.
+    
+    hover = bokeh.models.HoverTool(tooltips=[('date', '@committer_date'),
+                                	     ('num_lines_changed', '@num_lines_changed'),
+                                	     ('num_lines_inserted', '@num_lines_inserted'),
+                                	     ('num_lines_deleted', '@num_lines_deleted'),
+                                	     ('num_lines_modified', '@num_lines_modified')]);
+    
+    title = "Project Timelines (N=" + str(num_projects) + ")";
+    
+    p = bokeh.plotting.figure(plot_width=1250,
+               		      tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save, ''reset'],
+               		      title=title,
+               		      x_axis_label="Time",
+               		      x_axis_type='datetime',
+               		      y_axis_label="Repository"
+              		     );
+    
+    p.title.align='center';
+    p.title.text_font_size=font_size;
+    p.xaxis.major_label_text_font_size=font_size;
+    p.xaxis.axis_label_text_font_size=font_size;
+    p.yaxis.major_label_text_font_size=font_size;
+    p.yaxis.axis_label_text_font_size=font_size;
+
+    for j in range(0, num_projects): # For each project...
+
+        df = ds_df[(ds_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
+                    (ds_df['repo_name'] == project_ids_df.iloc[j]['repo_name'])];
+        
+        p = process_timelines(df, p, j);
+
+    figs_list.append(p);
 
 
 # Get datetime delta strftime-like string corresponding to datetime delta code.
@@ -593,6 +661,9 @@ def main():
         num_projects = project_summaries_df.shape[0];    
         
         print("Generating project statistics...");
+
+        get_project_timelines(project_ids_df, ds_df);
+
         for a in range(0, len(attributes)):
             attr = attributes[a];
             
