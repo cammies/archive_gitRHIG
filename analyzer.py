@@ -157,7 +157,7 @@ def get_project_ids(commits_df):
 
 
 # Plot repository timelines for some data set.
-def process_timelines(df, p, project_index_id):
+def process_timelines(df, p):
         
     global font_size;
     
@@ -165,10 +165,8 @@ def process_timelines(df, p, project_index_id):
     
     source = bokeh.plotting.ColumnDataSource(data=data);
     
-    y = [project_index_id for i in range(0, df.shape[0])];
-    
-    p.circle('committer_epoch', y, source=source);
-    p.line('committer_epoch', y, source=source);
+    p.circle('committer_epoch', 'project_index', source=source, line_color='green');
+    p.line('committer_epoch', 'project_index', source=source, line_color='green');
     
     return p;
 
@@ -184,7 +182,7 @@ def get_project_timelines(project_ids_df, ds_df):
     for i, row in ds_df.iterrows(): # Format committer dates.
 
         dt = datetime.datetime.fromtimestamp(float(row["committer_epoch"]));
-        ds_df.set_value(i, 'committer_epoch', dt);
+        ds_df.loc[i, 'committer_epoch'] = dt;
         
         committer_dates.append(dt.strftime("%Y-%m-%d %H:%M:%S " + time.tzname[1])); # (Account for Daylight Saving Time.)
 
@@ -196,7 +194,7 @@ def get_project_timelines(project_ids_df, ds_df):
                                 	     ('num_lines_deleted', '@num_lines_deleted'),
                                 	     ('num_lines_modified', '@num_lines_modified')]);
     
-    title = "Project Timelines (N=" + str(num_projects) + ")";
+    title = "Commit Patterns (N=" + str(num_projects) + ")";
     
     p = bokeh.plotting.figure(plot_width=1250,
                		      tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save, ''reset'],
@@ -218,7 +216,9 @@ def get_project_timelines(project_ids_df, ds_df):
         df = ds_df[(ds_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
                     (ds_df['repo_name'] == project_ids_df.iloc[j]['repo_name'])];
         
-        p = process_timelines(df, p, j);
+        pindex = [j for k in range(0, df.shape[0])];
+        df = df.assign(project_index= pindex);
+        p = process_timelines(df, p);
 
     figs_list.append(p);
 
@@ -440,7 +440,7 @@ def process_distribution_figs(attr, project_summaries_df):
 
     attr_label = attr_labels_dict[attr];
 
-    #process_histogram(attr_values, attr_label, 'Number of Projects');
+    process_histogram(attr_values, attr_label, 'Number of Projects');
 
     process_cdf(attr_values, attr_label);
 
