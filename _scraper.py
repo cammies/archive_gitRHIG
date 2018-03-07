@@ -249,11 +249,11 @@ def get_commits_df():
                      'num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
     
     # Initial commit field names.
-    COMMIT_FIELDS = ['commit_hash',
-                     'author_name', 'author_email', 'author_epoch',
-                     'committer_name', 'committer_email', 'committer_epoch',
-                     'subject', 
-                     'patch_str'];
+    COMMIT_FIELD_NAMES = ['commit_hash',
+                          'author_name', 'author_email', 'author_epoch',
+                          'committer_name', 'committer_email', 'committer_epoch',
+                          'subject',
+                          'patch_str'];
     
     sys.stdout.write("\r");
     sys.stdout.write("[git] Retrieving commit log: ...");
@@ -272,24 +272,17 @@ def get_commits_df():
 
         #field_groups = gitlog_str.strip('\n\x1e').split('\x1e'); # Split commit records.
         #del gitlog_str;
-        
-        field_groups = list(field_group.strip('\n\x1e') for field_group in gitlog_str.split('\x1e')); # Split commit records.
+
+
+        commit_groups = list(commit_group.strip('\n\x1e') for commit_group in gitlog_str.split('\x1e')); # Split commit records.
         #print field_groups
-        del gitlog_str;
+        #del gitlog_str;
 
         #for fg in field_groups:
         #    print fg
         #    print "Fabian"
-        field_records = list(field_group.split('\x1f') for field_group in field_groups[1:]); # Split fields within commits (for all commits records).
-        del field_groups;
-        #for fg in field_records:
-        #    print fg
-        
-        commits = list(dict(zip(COMMIT_FIELDS, field_record)) for field_record in field_records); # Make list of commit dicts.
-        #print commits
-        del field_records;
-        
-        num_commits = len(commits);
+        commit_groups = commit_groups[1:]; # Get rid of the first element - it is an empty string.
+        num_commits = len(commit_groups);
         
         ROW_LABELS = [r for r in range(0, num_commits)];
         
@@ -299,13 +292,11 @@ def get_commits_df():
         j = 0; # Number records processed.
         k = 0.0; # Probability of records processed.
         for i in range(0, num_commits):
-
-            #num_lines_changed = 0;
-            #num_lines_inserted = 0;
-            #num_lines_deleted = 0;
-            #num_lines_modified = 0;
-
-            commit = commits[i];
+            
+            commit_group = commit_groups[i];
+            
+            commit_fields = commit_group.split('\x1f');
+            commit = dict(zip(COMMIT_FIELD_NAMES, commit_fields)); # Make commit dict.
 
             author_name = sh.decode_str(commit['author_name']);
             author_email = sh.decode_str(commit['author_email']);
