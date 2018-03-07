@@ -125,26 +125,44 @@ def echo_args():
 
 
 #
-def get_labelled_rows(ds_df):
+def get_dated_labelled_rows(ds_df):
 
-    if (args.labels):
+    since = float(sh.utc_str_to_epoch(args.since));
+    until = float(sh.utc_str_to_epoch(args.until));
 
-        drop_these = list();
-        for i in range(0, ds_df.shape[0]): # For each project commit record (row) in data store DataFrame...
-            
-            ds_df_row = ds_df.iloc[i];
+    drop_these = list();
+    for i in range(0, ds_df.shape[0]): # For each project commit record (row) in data store DataFrame...
+        
+        ds_df_row = ds_df.iloc[i];
+        
+        ds_df_author_date = float(ds_df_row['author_epoch']);
+        ds_df_committer_date = float(ds_df_row['committer_epoch']);
+        
+        if (ds_df_author_date < since or
+            ds_df_author_date > until or
+            ds_df_committer_date < since or
+            ds_df_committer_date > until):
+
+            drop_these.append(i);
+        
+        elif (args.labels):
             
             record_labels_tuple = ast.literal_eval(ds_df_row['labels']);
+            include_row = False;
             for label in args.labels:
-                if (label not in record_labels_tuple):
-                    drop_these.append(i);
+                if (label in record_labels_tuple):
+                    include_row = True;
+                else:
+                    pass;
+            
+            if (include_row):
+                pass;
+            else:
+                drop_these.append(i);
 
-        df = ds_df.drop(drop_these);
+    df = ds_df.drop(drop_these);
         
-        return df;
-    
-    else:
-        return ds_df;
+    return df;
 
 
 # Determine project (calculated) IDs from data store.
@@ -214,7 +232,7 @@ def get_project_timelines(project_ids_df, ds_df):
     for j in range(0, num_projects): # For each project...
 
         df = ds_df[(ds_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
-                    (ds_df['repo_name'] == project_ids_df.iloc[j]['repo_name'])];
+                   (ds_df['repo_name'] == project_ids_df.iloc[j]['repo_name'])];
         
         pindex = [j for k in range(0, df.shape[0])];
         df = df.assign(project_index= pindex);
@@ -271,9 +289,6 @@ def get_project_summaries_df(commit_info_df, project_ids_df, attributes):
 
     column_labels = COLUMN_LABELS + attributes;
     
-    since = float(sh.utc_str_to_epoch(args.since));
-    until = float(sh.utc_str_to_epoch(args.until));
-
     summary_dfs = list();
     for i in range(0, project_ids_df.shape[0]): # For each project ID...
         
@@ -300,16 +315,9 @@ def get_project_summaries_df(commit_info_df, project_ids_df, attributes):
                     if (label not in record_labels_tuple):
                         matches_labels = False;
             
-            cf_df_author_date = float(cf_df_row['author_epoch']);
-            cf_df_committer_date = float(cf_df_row['committer_epoch']);
-            
             if (matches_labels and
                 cf_df_row['repo_owner'] == project_id_row['repo_owner'] and
-                cf_df_row['repo_name'] == project_id_row['repo_name'] and # If project ID matches current project ID...
-                cf_df_author_date >= since and 
-                cf_df_author_date <= until and
-                cf_df_committer_date >= since and 
-                cf_df_committer_date <= until):
+                cf_df_row['repo_name'] == project_id_row['repo_name']): # If project ID matches current project ID...
                 
                 commit_hashes.append(cf_df_row['commit_hash']);
                 
@@ -626,7 +634,7 @@ def main():
     print('');
     start = datetime.datetime.now();
 
-    ds_df = get_labelled_rows(ds_df);
+    ds_df = get_dated_labelled_rows(ds_df);
 
     if (not ds_df.empty):
         

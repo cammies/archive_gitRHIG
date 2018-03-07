@@ -359,7 +359,7 @@ def get_commits_df():
         sys.stdout.write(("[git] Generating commit records: {0}% (" + str(j) + "/" + str(num_commits) + "), done in {1}").format(int(100.0*k), t));
 
         print('');
-        
+
         return commits_df;
 
     else:
