@@ -231,7 +231,7 @@ def get_gitlog_str():
 
 # Parse git-log output str and store info in DataFrame.
 # Inspired by a blog post by Steven Kryskalla: http://blog.lost-theory.org/post/how-to-parse-git-log-output/
-def get_commits_df(gitlog_str):
+def get_commits_df():
 
     global repo_owner;
     global repo_name;
@@ -255,98 +255,108 @@ def get_commits_df(gitlog_str):
                      'subject', 
                      'patch_str'];
     
-    field_groups = gitlog_str.strip('\n\x1e').split('\x1e'); # Split commit records.
-    
-    field_records = [field_group.strip().split('\x1f') for field_group in field_groups]; # Split fields within commits (for all commits records).
-    
-    commits = [dict(zip(COMMIT_FIELDS, field_record)) for field_record in field_records]; # Make list of commit dicts.
-    
-    num_commits = len(commits);
-    
-    ROW_LABELS = [r for r in range(0, num_commits)];
-    
-    commits_df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
-    
+    sys.stdout.write("\r");
+    sys.stdout.write("[git] Retrieving commit log: ...");
+    sys.stdout.flush();
     t1 = datetime.datetime.now();
-    j = 0; # Number records processed.
-    k = 0.0; # Probability of records processed.
-    for i in range(0, num_commits):
-
-        #num_lines_changed = 0;
-        #num_lines_inserted = 0;
-        #num_lines_deleted = 0;
-        #num_lines_modified = 0;
-
-        commit = commits[i];
-
-        author_name = sh.decode_str(commit['author_name']);
-        author_email = sh.decode_str(commit['author_email']);
-        author_epoch = float(commit['author_epoch']);
-        committer_name = sh.decode_str(commit['committer_name']);
-        committer_email = sh.decode_str(commit['committer_email']);
-        committer_epoch = float(commit['committer_epoch']);
-        subject = sh.decode_str(commit['subject']);
-        len_subject = len(subject);
-        
-        if (args.anonymize):
-            author_name = sh.get_hash_str(author_name);
-            author_email = sh.get_hash_str(author_email);
-            committer_name = sh.get_hash_str(committer_name);
-            committer_email = sh.get_hash_str(committer_email);
-            subject = sh.get_hash_str(subject);
-        
-        #gitshow_str = get_gitshow_str(path_to_repo, path_in_repo, commit['commit_hash']);
-        #filenames = get_commit_filenames(commit['files_info']);
-        #(num_lines_changed, num_lines_inserted, num_lines_deleted, num_lines_modified) = get_commit_lines_changed_info(commit['patch_str']);
-
-        patch_str = commit['patch_str'];
-        files_str = patch_str.split('diff --git a/')[0];
-        #print files_str
-        
-        filenames = get_commit_filenames(files_str);
-        #print patch_str
-        #print filenames
-
-        (num_lines_inserted, num_lines_deleted, num_lines_modified) = get_changed_lines_info(patch_str);
-        num_lines_changed = num_lines_inserted + num_lines_deleted + num_lines_modified;
-        
-        #del commit['files_info']; # This field is no longer needed.
     
-        row = commits_df.iloc[i];
-
-        row['repo_owner'] = repo_owner;
-        row['repo_name'] = repo_name;
-        row['path_in_repo'] = path_in_repo;
-        row['labels'] = labels_for_repo;
-        row['commit_hash'] = commit['commit_hash'];
-        row['author_name'] = author_name;
-        row['author_email'] = author_email;
-        row['author_epoch'] = author_epoch;
-        row['committer_name'] = committer_name;
-        row['committer_email'] = committer_email;
-        row['committer_epoch'] = committer_epoch;
-        row['subject'] = subject;
-        row['len_subject'] = len_subject;
-        row['num_files_changed'] = len(filenames);
-        row['num_lines_changed'] = num_lines_changed;
-        row['num_lines_inserted'] = num_lines_inserted;
-        row['num_lines_deleted'] = num_lines_deleted;
-        row['num_lines_modified'] = num_lines_modified;
-        
-        j = j + 1;
-        k = float(j) / float(num_commits);
-        sys.stdout.write("\r");
-        sys.stdout.write(("[git] Generating commit records: {0}% (" + str(j) + "/" + str(num_commits) + ")").format(int(100.0*k)));
-        sys.stdout.flush();
+    gitlog_str = get_gitlog_str();
     
     t2 = datetime.datetime.now();
     t = t2 - t1;
     sys.stdout.write("\r");
-    sys.stdout.write(("[git] Generating commit records: {0}% (" + str(j) + "/" + str(num_commits) + "), done in {1}").format(int(100.0*k), t));
-
+    sys.stdout.write("[git] Retrieving commit log: done in {0}".format(t));
     print('');
-    
-    return commits_df;
+
+    if (gitlog_str):
+
+        field_groups = gitlog_str.strip('\n\x1e').split('\x1e'); # Split commit records.
+        
+        field_records = [field_group.strip().split('\x1f') for field_group in field_groups]; # Split fields within commits (for all commits records).
+        
+        commits = [dict(zip(COMMIT_FIELDS, field_record)) for field_record in field_records]; # Make list of commit dicts.
+        
+        num_commits = len(commits);
+        
+        ROW_LABELS = [r for r in range(0, num_commits)];
+        
+        commits_df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
+        
+        t1 = datetime.datetime.now();
+        j = 0; # Number records processed.
+        k = 0.0; # Probability of records processed.
+        for i in range(0, num_commits):
+
+            #num_lines_changed = 0;
+            #num_lines_inserted = 0;
+            #num_lines_deleted = 0;
+            #num_lines_modified = 0;
+
+            commit = commits[i];
+
+            author_name = sh.decode_str(commit['author_name']);
+            author_email = sh.decode_str(commit['author_email']);
+            author_epoch = float(commit['author_epoch']);
+            committer_name = sh.decode_str(commit['committer_name']);
+            committer_email = sh.decode_str(commit['committer_email']);
+            committer_epoch = float(commit['committer_epoch']);
+            subject = sh.decode_str(commit['subject']);
+            len_subject = len(subject);
+            
+            if (args.anonymize):
+                author_name = sh.get_hash_str(author_name);
+                author_email = sh.get_hash_str(author_email);
+                committer_name = sh.get_hash_str(committer_name);
+                committer_email = sh.get_hash_str(committer_email);
+                subject = sh.get_hash_str(subject);
+            
+            patch_str = commit['patch_str'];
+            files_str = patch_str.split('diff --git a/')[0];
+            
+            filenames = get_commit_filenames(files_str);
+
+            (num_lines_inserted, num_lines_deleted, num_lines_modified) = get_changed_lines_info(patch_str);
+            num_lines_changed = num_lines_inserted + num_lines_deleted + num_lines_modified;
+        
+            row = commits_df.iloc[i];
+
+            row['repo_owner'] = repo_owner;
+            row['repo_name'] = repo_name;
+            row['path_in_repo'] = path_in_repo;
+            row['labels'] = labels_for_repo;
+            row['commit_hash'] = commit['commit_hash'];
+            row['author_name'] = author_name;
+            row['author_email'] = author_email;
+            row['author_epoch'] = author_epoch;
+            row['committer_name'] = committer_name;
+            row['committer_email'] = committer_email;
+            row['committer_epoch'] = committer_epoch;
+            row['subject'] = subject;
+            row['len_subject'] = len_subject;
+            row['num_files_changed'] = len(filenames);
+            row['num_lines_changed'] = num_lines_changed;
+            row['num_lines_inserted'] = num_lines_inserted;
+            row['num_lines_deleted'] = num_lines_deleted;
+            row['num_lines_modified'] = num_lines_modified;
+            
+            j = j + 1;
+            k = float(j) / float(num_commits);
+            sys.stdout.write("\r");
+            sys.stdout.write(("[git] Generating commit records: {0}% (" + str(j) + "/" + str(num_commits) + ")").format(int(100.0*k)));
+            sys.stdout.flush();
+        
+        t2 = datetime.datetime.now();
+        t = t2 - t1;
+        sys.stdout.write("\r");
+        sys.stdout.write(("[git] Generating commit records: {0}% (" + str(j) + "/" + str(num_commits) + "), done in {1}").format(int(100.0*k), t));
+
+        print('');
+        
+        return commits_df;
+
+    else:
+
+        return pandas.DataFrame();
 
 
 # Export DataFrame to file.
@@ -368,23 +378,10 @@ def push_commit_records(commits_df, title, destination):
 # Process info for single project.
 def process_project():
 
-    sys.stdout.write("\r");
-    sys.stdout.write("[git] Retrieving commit log: ...");
-    sys.stdout.flush();
-    t1 = datetime.datetime.now();
-    
-    gitlog_str = get_gitlog_str();
-    
-    t2 = datetime.datetime.now();
-    t = t2 - t1;
-    sys.stdout.write("\r");
-    sys.stdout.write("[git] Retrieving commit log: done in {0}".format(t));
-    print('');
-
-    if (gitlog_str):
-
-        commits_df = get_commits_df(gitlog_str);
+    commits_df = get_commits_df();
         
+    if (not commits_df.empty):
+
         sys.stdout.write("\r");
         sys.stdout.write("[pandas] Importing commit records into data store: ...");
         sys.stdout.flush();
