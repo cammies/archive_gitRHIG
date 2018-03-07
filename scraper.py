@@ -271,10 +271,13 @@ def get_commits_df():
     if (gitlog_str):
 
         field_groups = gitlog_str.strip('\n\x1e').split('\x1e'); # Split commit records.
+        del gitlog_str;
         
         field_records = [field_group.strip().split('\x1f') for field_group in field_groups]; # Split fields within commits (for all commits records).
+        del field_groups;
         
         commits = [dict(zip(COMMIT_FIELDS, field_record)) for field_record in field_records]; # Make list of commit dicts.
+        del field_records;
         
         num_commits = len(commits);
         
