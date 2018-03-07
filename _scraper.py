@@ -4,6 +4,7 @@
 import argparse; # Script arguments.
 import datetime; # Datetime handling.
 import io; # File writing.
+import itertools; # To count items in gernator.
 import modules.shared as sh;
 import os; # File system handling.
 import pandas; # DataFrame handling.
@@ -273,16 +274,18 @@ def get_commits_df():
         #field_groups = gitlog_str.strip('\n\x1e').split('\x1e'); # Split commit records.
         #del gitlog_str;
 
-
-        commit_groups = list(commit_group.strip('\n\x1e') for commit_group in gitlog_str.split('\x1e')); # Split commit records.
-        #print field_groups
+        #num_commits = 0;
+        commit_groups = (commit_group.strip('\n\x1e') for commit_group in gitlog_str.split('\x1e')); # Split commit records.
         #del gitlog_str;
 
         #for fg in field_groups:
         #    print fg
         #    print "Fabian"
-        commit_groups = commit_groups[1:]; # Get rid of the first element - it is an empty string.
-        num_commits = len(commit_groups);
+        #commit_groups = commit_groups[1:]; # Get rid of the first element - it is an empty string.
+        #num_commits = len(list(commit_groups));
+        (commit_groups, count_commit_groups) = itertools.tee(commit_groups, 2);
+        count_commit_groups.next(); # Skip the first one.
+        num_commits = sum(1 for cg in count_commit_groups);
         
         ROW_LABELS = [r for r in range(0, num_commits)];
         
@@ -291,9 +294,10 @@ def get_commits_df():
         t1 = datetime.datetime.now();
         j = 0; # Number records processed.
         k = 0.0; # Probability of records processed.
+        commit_groups.next(); # Skip the first one.
         for i in range(0, num_commits):
-            
-            commit_group = commit_groups[i];
+
+            commit_group = commit_groups.next();
             
             commit_fields = commit_group.split('\x1f');
             commit = dict(zip(COMMIT_FIELD_NAMES, commit_fields)); # Make commit dict.
