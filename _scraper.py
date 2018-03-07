@@ -201,7 +201,7 @@ def get_gitlog_str():
                      '%cn', '%ce', '%ct',
                      '%s'];
     
-    gitlog_format = '%x1e' + '%x1f'.join(GITLOG_FIELDS) + '%x1f'; # Last '\x1f' accounts for files info field string.
+    gitlog_format = '\x1e\x1e\x1e' + '\x1f\x1f\x1f'.join(GITLOG_FIELDS) + '\x1f\x1f\x1f'; # Last '\x1f' accounts for files info field string.
     
     config = '-c color.diff.plain=\'normal\' -c color.diff.meta=\'normal bold\' -c color.diff.old=\'red\' -c color.diff.new=\'green\' -c color.diff.whitespace=\'normal\' -c color.ui=\'always\'';
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
@@ -275,7 +275,7 @@ def get_commits_df():
         #del gitlog_str;
 
         #num_commits = 0;
-        commit_groups = (commit_group.strip('\n\x1e') for commit_group in gitlog_str.split('\x1e')); # Split commit records.
+        commit_groups = (commit_group.strip('\x1e\x1e\x1e') for commit_group in gitlog_str.split('\n\x1e\x1e\x1e')); # Split commit records.
         #del gitlog_str;
 
         #for fg in field_groups:
@@ -284,7 +284,7 @@ def get_commits_df():
         #commit_groups = commit_groups[1:]; # Get rid of the first element - it is an empty string.
         #num_commits = len(list(commit_groups));
         (commit_groups, count_commit_groups) = itertools.tee(commit_groups, 2);
-        count_commit_groups.next(); # Skip the first one.
+        #count_commit_groups.next(); # Skip the first one.
         num_commits = sum(1 for cg in count_commit_groups);
         
         ROW_LABELS = [r for r in range(0, num_commits)];
@@ -294,12 +294,12 @@ def get_commits_df():
         t1 = datetime.datetime.now();
         j = 0; # Number records processed.
         k = 0.0; # Probability of records processed.
-        commit_groups.next(); # Skip the first one.
+        #commit_groups.next(); # Skip the first one.
         for i in range(0, num_commits):
 
             commit_group = commit_groups.next();
             
-            commit_fields = commit_group.split('\x1f');
+            commit_fields = commit_group.split('\x1f\x1f\x1f');
             commit = dict(zip(COMMIT_FIELD_NAMES, commit_fields)); # Make commit dict.
 
             author_name = sh.decode_str(commit['author_name']);
