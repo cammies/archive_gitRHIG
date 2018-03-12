@@ -42,6 +42,7 @@ def process_args():
     argparser = argparse.ArgumentParser();
     
     argparser.add_argument('--data-store', help="input data store", type=str);
+    argparser.add_argument('--iwidth', help="interval width", type=int);
     argparser.add_argument('-d','--directory', help="runtime working directory", type=str);
     argparser.add_argument('--dt-deltas', help="which datetime deltas to consider", type=str);
     argparser.add_argument('--labels', help="label commit records", type=str);
@@ -551,6 +552,58 @@ def get_interval_end(num):
     return interval_end;
 
 
+#
+def get_interval_df(attr, project_summaries_df):
+    
+    df = pandas.DataFrame();
+
+    COLUMN_LABELS = ['>=', '<'];
+
+    if (args.iwidth):
+        
+        iwidth = args.iwidth;
+
+        values = project_summaries_df[attr].tolist();
+
+        max_val = max(values);
+
+        num_intervals = int(max_val / iwidth) + 1;
+
+        row_labels = [i for i in range(0, num_intervals+1)];
+        df = pandas.DataFrame(index=row_labels, columns=COLUMN_LABELS);
+        df.fillna(0.0);
+        
+        df.iloc[0]['>='] = 0;
+        df.iloc[0]['<'] = 1;
+        for i in range(0, num_intervals):
+
+            s = i * iwidth;
+            df.iloc[i+1]['>='] = s + 1;
+            df.iloc[i+1]['<'] = s + iwidth + 1;
+
+    else:
+        
+        num_projects = project_summaries_df.shape[0];
+        
+        row_labels = [i for i in range(0, num_projects)];
+    
+        df = pandas.DataFrame(index=row_labels, columns=COLUMN_LABELS);
+        df.fillna(0.0);
+        
+        for i in range(0, num_projects): # For each project summary...
+            
+            project_summaries_row = project_summaries_df.iloc[i]; # Get project summary record (row).
+            attr_value = project_summaries_row[attr]; # Get project attribute value.
+            
+            df.iloc[i]['>='] = get_interval_begin(attr_value);
+            df.iloc[i]['<'] = get_interval_end(attr_value); # Calculate interval end.
+    
+    interval_df = df[['>=','<']];
+    interval_df = interval_df.drop_duplicates().reset_index(drop=True); # Eliminate duplicates.
+
+    return interval_df;
+
+
 # Get frequency distribution DataFrame for a group of project summaries for some attrbute.
 def get_project_attr_frequency_dist_df(attr, project_summaries_df):
     
@@ -576,17 +629,7 @@ def get_project_attr_frequency_dist_df(attr, project_summaries_df):
     df = pandas.DataFrame(index=row_labels, columns=COLUMN_LABELS);
     df.fillna(0.0);
     
-    for i in range(0, num_projects): # For each project summary...
-        
-        project_summaries_row = project_summaries_df.iloc[i]; # Get project summary record (row).
-        attr_value = project_summaries_row[attr]; # Get project attribute value.
-        
-        df.iloc[i]['>='] = get_interval_begin(attr_value);
-        
-        df.iloc[i]['<'] = get_interval_end(attr_value); # Calculate interval end.
-    
-    interval_df = df[['>=','<']];
-    interval_df = interval_df.drop_duplicates().reset_index(drop=True); # Eliminate duplicates.
+    interval_df = get_interval_df(attr, project_summaries_df);
     
     frequency_dist_df = get_frequency_dist_df(attr, project_summaries_df, interval_df);
     
