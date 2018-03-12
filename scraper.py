@@ -4,6 +4,7 @@
 import argparse; # Script arguments.
 import datetime; # Datetime handling.
 import io; # File writing.
+import itertools; # To count items in gernator.
 import modules.shared as sh;
 import os; # File system handling.
 import pandas; # DataFrame handling.
@@ -36,7 +37,7 @@ def process_args():
     argparser.add_argument('-s','--sources', help="path to repository (relative to local working environment)", type=str);
     argparser.add_argument('-a','--anonymize', help="enforce anonymization on output commit records", action="store_true");
     argparser.add_argument('--data-store', help="destination data store (XLSX file) for commit records", type=str);
-    argparser.add_argument('--paths-in-repo', help="comma-separated string of repository subdirectories to process", type=str);
+    argparser.add_argument('--paths', help="comma-separated string of repository subdirectories to process", type=str);
     argparser.add_argument('--labels', help="label commit records", type=str);
     argparser.add_argument('--since', help="scrape information about commits more recent than a specific date", type=str);
     argparser.add_argument('--until', help="scrape information about commits older than a specific date", type=str);
@@ -76,7 +77,7 @@ def check_args():
         args.data_store = 'scraper-data_store-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3] + '.xlsx';
     
     # Paths in repo.
-    args.paths_in_repo = sh.get_paths_in_repo(args.paths_in_repo);
+    args.paths = sh.get_paths_in_repo(args.paths);
     
     # Label commit records.
     args.labels = sh.get_labels(args.labels);
@@ -92,8 +93,8 @@ def check_args():
 
 # Print script argument configurations.
 def echo_args():
-    
-    arg_paths_in_repo = ", ".join(["\'" + p + "\'" for p in args.paths_in_repo]) if (args.paths_in_repo) else "\'.\'";
+   
+    arg_paths_in_repo = ", ".join(["\'" + p + "\'" for p in args.paths]) if (args.paths) else "\'.\'";
     
     print("[global] Anonymize: " + str(args.anonymize));
     print("[global] Data store: \'" + args.data_store + '\'');
@@ -130,59 +131,11 @@ def get_commit_filenames(files_str):
     
     filenames = re.findall(filenames_regex, files_str);
     
-    #for i in range(0, len(filenames)):
-    #    filenames[i] = filenames[i].rstrip(); # (Strip leading, trailing spaces from filename str.)
-    
     return filenames;
 
 
-# Get git-show output str for a particular commit.
-def get_gitshow_str(path_to_repo, path_in_repo, commit_hash):
-    
-    config = '-c color.diff.plain=\'normal\' -c color.diff.meta=\'normal bold\' -c color.diff.old=\'red\' -c color.diff.new=\'green\' -c color.diff.whitespace=\'normal\' -c color.ui=\'always\'';
-    gd = '--git-dir=\'' + path_to_repo + '/.git/\''; # Wrap dir in quotation marks for safety (may contain spaces, etc.).
-    wt = '--work-tree=\'' + path_to_repo + '\''; # Wrap dir in quotation marks for safety (may contain spaces, etc.).
-    ch = commit_hash;
-    wd = '--word-diff=plain';
-    p = '-- \'' + path_in_repo + '\'';
-    
-    cmd_str = 'git %s %s %s show %s %s %s' % (config,gd,wt,ch,wd,p);
-    #print(cmd_str);
-    
-    sp = subprocess.Popen(cmd_str,
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT,
-                          shell=True);
-    (git_show_str, _) = sp.communicate();
-    
-    return git_show_str;
-
-
-#KEY_BEGIN = '\x1B\x5B\x31\x6D';
-#KEY_END = '\x1B\x5B\x6D';
-KEY_BEGIN = '\x1B[1m';
-KEY_END = '\x1B[m';
-# Contruct file-diff dict from git-show diff str.
-def get_files_diff_dict(files_diff_str):
-   
-    files_diff_str = files_diff_str.split('\n' + KEY_BEGIN + 'diff --git ');
-    del files_diff_str[0]; # First element not needed (EXPLAIN WHY).
-    
-    files_diff_dict = dict();
-    for diff_str in files_diff_str:
-   
-        diff_str_lines = diff_str.splitlines();
-        
-        dict_key = KEY_BEGIN + 'diff --git ' + diff_str_lines[0]; # (First line used as other half of dict key).
-        del diff_str_lines[0]; # Don't include (partial) dict key in file diff lines list. 
-
-        files_diff_dict[dict_key] = diff_str_lines;
-
-    return files_diff_dict;
-
-
-# Get info on line insertions, deletions and modifications.
-def get_changed_lines_info(file_diff_lines):
+# Calculate number of lines inserted, deleted, modified.
+def get_changed_lines_info(patch_str):
     
     #ADDITION_REGEX = re.compile(ur'\x1B\x5B\x33\x32\x6D\x7B\x2B[\s\S]*[\S]+[\s\S]*\x2B\x7D\x1B\x5B\x6D',
     #                            re.UNICODE);
@@ -204,8 +157,10 @@ def get_changed_lines_info(file_diff_lines):
     num_lines_inserted = 0;
     num_lines_deleted = 0;
     num_lines_modified = 0;
-    
-    for line in file_diff_lines:
+
+    patch_str = patch_str.split('\n'); # Get string lines.
+
+    for line in patch_str:
         
         line = line.strip();
 
@@ -234,45 +189,6 @@ def get_changed_lines_info(file_diff_lines):
     return (num_lines_inserted, num_lines_deleted, num_lines_modified);
 
 
-# Calculate number of lines inserted, deleted, modified and the combined total for these.
-def get_commit_lines_changed_info(gitshow_str, filenames):
-    
-    total_num_lines_changed = 0;
-    total_num_lines_inserted = 0;
-    total_num_lines_deleted = 0;
-    total_num_lines_modified = 0;
-    
-    files_diff_dict = get_files_diff_dict(gitshow_str);
-    
-    for i in range(0, len(filenames)):
-        
-        filename = filenames[i];
-
-        file_num_lines_changed = 0;
-        file_num_lines_inserted = 0;
-        file_num_lines_deleted = 0;
-        file_num_lines_modified = 0;
-
-        if (filename.startswith('\"') and filename.endswith('\"')):
-            filename = filename[1:-1]; # Strip the quotation marks from filename string.
-            files_diff_dict_key = ('diff --git ' + '\"' + 'a/%s' + '\" \"' + 'b/%s' + '\"') % (filename,filename);
-        else:
-            files_diff_dict_key = 'diff --git a/%s b/%s' % (filename,filename);
-
-        files_diff_dict_key = KEY_BEGIN + files_diff_dict_key + KEY_END;
-        file_diff_lines = files_diff_dict[files_diff_dict_key];
-        
-        (file_num_lines_inserted, file_num_lines_deleted, file_num_lines_modified) = get_changed_lines_info(file_diff_lines);
-        file_num_lines_changed = file_num_lines_inserted + file_num_lines_deleted + file_num_lines_modified;
-
-        total_num_lines_changed = total_num_lines_changed + file_num_lines_changed;
-        total_num_lines_inserted = total_num_lines_inserted + file_num_lines_inserted;
-        total_num_lines_deleted = total_num_lines_deleted + file_num_lines_deleted;
-        total_num_lines_modified = total_num_lines_modified + file_num_lines_modified;
-        
-    return (total_num_lines_changed, total_num_lines_inserted, total_num_lines_deleted, total_num_lines_modified);
-    
-
 # Get git-log output str for a particular repository.
 def get_gitlog_str():
     
@@ -285,9 +201,9 @@ def get_gitlog_str():
                      '%cn', '%ce', '%ct',
                      '%s'];
     
-    gitlog_format = '\x1e' + '\x1f'.join(GITLOG_FIELDS) + '\x1f'; # Last '\x1f' accounts for files info field string.
+    gitlog_format = '\x1e\x1e\x1e' + '\x1f\x1f\x1f'.join(GITLOG_FIELDS) + '\x1f\x1f\x1f'; # Last '\x1f' accounts for files info field string.
     
-    config = '-c color.ui=\'false\'';
+    config = '-c color.diff.plain=\'normal\' -c color.diff.meta=\'normal bold\' -c color.diff.old=\'red\' -c color.diff.new=\'green\' -c color.diff.whitespace=\'normal\' -c color.ui=\'always\'';
     gd = '--git-dir=\'' + path_to_repo + '/.git/\'';
     wt = '--work-tree=\'' + path_to_repo + '\'';
     fh = '--full-history';
@@ -297,9 +213,11 @@ def get_gitlog_str():
     stat_width = 1000; # Length of git-log output. (Using insanely-high value to ensure "long" filenames are captured in their entirety.)
     sw = '--stat-width=' + str(stat_width);
     f = '--format=' + gitlog_format;
+    patch = '-p';
+    wd = '--word-diff=plain';
     p = '-- \'' + path_in_repo + '\'';
     
-    cmd_str = 'git %s %s %s log %s %s %s %s %s %s %s' % (config,gd,wt,fh,a,b,s,sw,f,p);
+    cmd_str = 'git %s %s %s log %s %s %s %s %s %s %s %s %s' % (config,gd,wt,fh,a,b,s,sw,f,patch,wd,p);
     #print(cmd_str);
 
     sp = subprocess.Popen(cmd_str,
@@ -332,11 +250,11 @@ def get_commits_df():
                      'num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
     
     # Initial commit field names.
-    COMMIT_FIELDS = ['commit_hash',
-                     'author_name', 'author_email', 'author_epoch',
-                     'committer_name', 'committer_email', 'committer_epoch',
-                     'subject', 
-                     'files_info'];
+    COMMIT_FIELD_NAMES = ['commit_hash',
+                          'author_name', 'author_email', 'author_epoch',
+                          'committer_name', 'committer_email', 'committer_epoch',
+                          'subject',
+                          'patch_str'];
     
     sys.stdout.write("\r");
     sys.stdout.write("[git] Retrieving commit log: ...");
@@ -353,16 +271,21 @@ def get_commits_df():
 
     if (gitlog_str):
 
-        field_groups = gitlog_str.strip('\n\x1e').split('\x1e'); # Split commit records.
-        del gitlog_str;
-        
-        field_records = [field_group.strip().split('\x1f') for field_group in field_groups]; # Split fields within commits (for all commits records).
-        del field_groups;
-        
-        commits = [dict(zip(COMMIT_FIELDS, field_record)) for field_record in field_records]; # Make list of commit dicts.
-        del field_records;
-        
-        num_commits = len(commits);
+        #field_groups = gitlog_str.strip('\n\x1e').split('\x1e'); # Split commit records.
+        #del gitlog_str;
+
+        #num_commits = 0;
+        commit_groups = (commit_group.strip('\x1e\x1e\x1e') for commit_group in gitlog_str.split('\n\x1e\x1e\x1e')); # Split commit records.
+        #del gitlog_str;
+
+        #for fg in field_groups:
+        #    print fg
+        #    print "Fabian"
+        #commit_groups = commit_groups[1:]; # Get rid of the first element - it is an empty string.
+        #num_commits = len(list(commit_groups));
+        (commit_groups, count_commit_groups) = itertools.tee(commit_groups, 2);
+        #count_commit_groups.next(); # Skip the first one.
+        num_commits = sum(1 for cg in count_commit_groups);
         
         ROW_LABELS = [r for r in range(0, num_commits)];
         
@@ -371,14 +294,13 @@ def get_commits_df():
         t1 = datetime.datetime.now();
         j = 0; # Number records processed.
         k = 0.0; # Probability of records processed.
+        #commit_groups.next(); # Skip the first one.
         for i in range(0, num_commits):
 
-            num_lines_changed = 0;
-            num_lines_inserted = 0;
-            num_lines_deleted = 0;
-            num_lines_modified = 0;
-
-            commit = commits[i];
+            commit_group = commit_groups.next();
+            
+            commit_fields = commit_group.split('\x1f\x1f\x1f');
+            commit = dict(zip(COMMIT_FIELD_NAMES, commit_fields)); # Make commit dict.
 
             author_name = sh.decode_str(commit['author_name']);
             author_email = sh.decode_str(commit['author_email']);
@@ -396,10 +318,14 @@ def get_commits_df():
                 committer_email = sh.get_hash_str(committer_email);
                 subject = sh.get_hash_str(subject);
             
-            gitshow_str = get_gitshow_str(path_to_repo, path_in_repo, commit['commit_hash']);
-            filenames = get_commit_filenames(commit['files_info']);
-            (num_lines_changed, num_lines_inserted, num_lines_deleted, num_lines_modified) = get_commit_lines_changed_info(gitshow_str, filenames);
+            patch_str = commit['patch_str'];
+            files_str = patch_str.split('diff --git a/')[0];
             
+            filenames = get_commit_filenames(files_str);
+
+            (num_lines_inserted, num_lines_deleted, num_lines_modified) = get_changed_lines_info(patch_str);
+            num_lines_changed = num_lines_inserted + num_lines_deleted + num_lines_modified;
+        
             row = commits_df.iloc[i];
 
             row['repo_owner'] = repo_owner;
@@ -433,7 +359,7 @@ def get_commits_df():
         sys.stdout.write(("[git] Generating commit records: {0}% (" + str(j) + "/" + str(num_commits) + "), done in {1}").format(int(100.0*k), t));
 
         print('');
-        
+
         return commits_df;
 
     else:
@@ -522,7 +448,7 @@ def main():
             repo_owner = sh.get_hash_str(repo_owner);
             repo_name = sh.get_hash_str(repo_name);
 
-        paths = args.paths_in_repo + source['paths_in_repo'];
+        paths = args.paths + source['paths_in_repo'];
         paths = list(set(paths)); # Eliminate any duplicates.
         paths = paths if paths else ['.'];
         

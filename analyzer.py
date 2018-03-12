@@ -206,27 +206,31 @@ def get_project_timelines(project_ids_df, ds_df):
 
     ds_df['committer_date'] = committer_dates; # Add new column for committer dates as strings.
     
-    hover = bokeh.models.HoverTool(tooltips=[('date', '@committer_date'),
-                                	     ('num_lines_changed', '@num_lines_changed'),
-                                	     ('num_lines_inserted', '@num_lines_inserted'),
-                                	     ('num_lines_deleted', '@num_lines_deleted'),
-                                	     ('num_lines_modified', '@num_lines_modified')]);
+    hover = bokeh.models.HoverTool(tooltips=[('repo_owner', '@repo_owner'),
+                                             ('repo_name', '@repo_name'),
+                                             ('path_in_repo', '@path_in_repo'),
+                                             ('date', '@committer_date'),
+                                             ('num_lines_changed', '@num_lines_changed'),
+                                             ('num_lines_inserted', '@num_lines_inserted'),
+                                             ('num_lines_deleted', '@num_lines_deleted'),
+                                             ('num_lines_modified', '@num_lines_modified')]);
     
     title = "Commit Patterns (N=" + str(num_projects) + ")";
     
-    p = bokeh.plotting.figure(plot_width=1250,
-               		      tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save, ''reset'],
-               		      title=title,
-               		      x_axis_label="Time",
-               		      x_axis_type='datetime',
-               		      y_axis_label="Repository"
-              		     );
+    p = bokeh.plotting.figure(#plot_width=400,
+                              #plot_height=400,
+                              tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save, ''reset'],
+                              title=title,
+                              x_axis_label="Time",
+                              x_axis_type='datetime',
+                              y_axis_label="Repository"
+                              );
     
     p.title.align='center';
     p.title.text_font_size=font_size;
     p.xaxis.major_label_text_font_size=font_size;
     p.xaxis.axis_label_text_font_size=font_size;
-    p.yaxis.major_label_text_font_size=font_size;
+    p.yaxis.major_label_text_font_size='0pt';
     p.yaxis.axis_label_text_font_size=font_size;
 
     for j in range(0, num_projects): # For each project...
@@ -234,7 +238,7 @@ def get_project_timelines(project_ids_df, ds_df):
         df = ds_df[(ds_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
                    (ds_df['repo_name'] == project_ids_df.iloc[j]['repo_name'])];
         
-        pindex = [j for k in range(0, df.shape[0])];
+        pindex = [j+1 for k in range(0, df.shape[0])];
         df = df.assign(project_index= pindex);
         p = process_timelines(df, p);
 
