@@ -30,6 +30,8 @@ args = ''; # For script arguments object.
 commit_info_df = ''; # For data store DataFrame.
 committed_files_df = ''; # For data store DataFrame.
 
+iwidths_dict = None;
+
 figs_list = list(); # List of distribution figures.
 
 xlsfiles = list(); # Keep track of output XLS filenames.
@@ -42,7 +44,7 @@ def process_args():
     argparser = argparse.ArgumentParser();
     
     argparser.add_argument('--data-store', help="input data store", type=str);
-    argparser.add_argument('--iwidth', help="interval width", type=int);
+    argparser.add_argument('--iwidths', help="interval width", type=str);
     argparser.add_argument('-d','--directory', help="runtime working directory", type=str);
     argparser.add_argument('--dt-deltas', help="which datetime deltas to consider", type=str);
     argparser.add_argument('--labels', help="label commit records", type=str);
@@ -90,7 +92,10 @@ def check_args():
         
     else:
         sys.exit("Must specify an input data store!");
-
+    
+    global iwidths_dict;
+    iwidths_dict = sh.get_intervals_dict(args.iwidths);
+    
     # Working directory.
     args.directory = sh.get_wd(args.directory);
     
@@ -559,9 +564,12 @@ def get_interval_df(attr, project_summaries_df):
 
     COLUMN_LABELS = ['>=', '<'];
 
-    if (args.iwidth):
-        
-        iwidth = args.iwidth;
+    global iwidths_dict;
+    if (attr in iwidths_dict):
+
+        print("Attribute \'" + attr + "\' found");
+
+        iwidth = int(iwidths_dict[attr]);
 
         values = project_summaries_df[attr].tolist();
 
@@ -580,6 +588,7 @@ def get_interval_df(attr, project_summaries_df):
             s = i * iwidth;
             df.iloc[i+1]['>='] = s + 1;
             df.iloc[i+1]['<'] = s + iwidth + 1;
+
 
     else:
         
