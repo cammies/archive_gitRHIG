@@ -341,6 +341,21 @@ def get_labels(labels_str):
     return labels;
 
 
+# Paths in repo considered when processing each repo.
+def get_intervals_dict(iwidths_str):
+    
+    iw_dict = dict();
+    if (iwidths_str):
+        iw_strs = split_str(';', iwidths_str);
+        iw_strs = list(set(iw_strs)); # Eliminate any duplicates.
+
+        for iw_str in iw_strs:
+            iw = split_str(':', iw_str);
+            iw_dict[iw[0]] = iw[1];
+    
+    return iw_dict;
+
+
 # Verify working directory for runtime storage processing.
 def get_wd(directory_str):
     
