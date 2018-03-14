@@ -31,12 +31,15 @@ commit_info_df = ''; # For data store DataFrame.
 committed_files_df = ''; # For data store DataFrame.
 
 iwidths_dict = None;
+icounts_dict = None;
 
 figs_list = list(); # List of distribution figures.
 
 xlsfiles = list(); # Keep track of output XLS filenames.
 
 font_size = "12pt"; # Font size for text in output graphs.
+
+dt_deltas = list();
 
 # Process script arguments.
 def process_args():
@@ -45,8 +48,9 @@ def process_args():
     
     argparser.add_argument('--data-store', help="input data store", type=str);
     argparser.add_argument('--iwidths', help="interval width", type=str);
+    argparser.add_argument('--icounts', help="interval count", type=str);
     argparser.add_argument('-d','--directory', help="runtime working directory", type=str);
-    argparser.add_argument('--dt-deltas', help="which datetime deltas to consider", type=str);
+    #argparser.add_argument('--dt-deltas', help="which datetime deltas to consider", type=str);
     argparser.add_argument('--labels', help="label commit records", type=str);
     argparser.add_argument('--since', help="analyze information about commits records more recent than a specific date", type=str);
     argparser.add_argument('--until', help="analyze information about commits records older than a specific date", type=str);
@@ -96,19 +100,22 @@ def check_args():
     global iwidths_dict;
     iwidths_dict = sh.get_intervals_dict(args.iwidths);
     
+    global icounts_dict;
+    icounts_dict = sh.get_intervals_dict(args.icounts);
+    
     # Working directory.
     args.directory = sh.get_wd(args.directory);
     
     # Get valid DTDs.
-    dtd_codes = list();
-    if (args.dt_deltas):
-        args.dt_deltas = sh.split_str(',', args.dt_deltas);
-        for dtd_code in args.dt_deltas:
-            if (dtd_code in DTD_CODES):
-                dtd_codes.append(dtd_code);
-            else:
-                print(sh.get_warning_str("Unrecognized datetime delta code \'" + dtd_code + "\'"));
-    args.dt_deltas = list(set(dtd_codes));
+    #dtd_codes = list();
+    #if (args.dt_deltas):
+    #    args.dt_deltas = sh.split_str(',', args.dt_deltas);
+    #    for dtd_code in args.dt_deltas:
+    #        if (dtd_code in DTD_CODES):
+    #            dtd_codes.append(dtd_code);
+    #        else:
+    #            print(sh.get_warning_str("Unrecognized datetime delta code \'" + dtd_code + "\'"));
+    #args.dt_deltas = list(set(dtd_codes));
 
     # Label commit records.
     args.labels = sh.get_labels(args.labels);
@@ -172,9 +179,9 @@ def get_dated_labelled_rows(ds_df):
 
 
 # Determine project (calculated) IDs from data store.
-def get_project_ids(commits_df):
+def get_project_ids(ds_df):
 
-    project_ids_df = commits_df[['repo_owner', 'repo_name']];#, 'path_in_repo']];#, 'path_to_repo']];
+    project_ids_df = ds_df[['github_hostname', 'repo_owner', 'repo_name', 'path_in_repo']];#, 'path_in_repo']];#, 'path_to_repo']];
     project_ids_df = project_ids_df.drop_duplicates().reset_index(drop=True);
     
     return project_ids_df;
@@ -294,8 +301,10 @@ def get_num_dtds(epochs, dtd_code):
 # Get datetime delta metrics and project feature vector.
 def get_project_summaries_df(commit_info_df, project_ids_df, attributes):
     
-    COLUMN_LABELS = ['repo_owner',
-                     'repo_name'];
+    COLUMN_LABELS = ['github_hostname',
+                     'repo_owner',
+                     'repo_name',
+                     'path_in_repo'];
 
     column_labels = COLUMN_LABELS + attributes;
     
@@ -326,8 +335,10 @@ def get_project_summaries_df(commit_info_df, project_ids_df, attributes):
                         matches_labels = False;
             
             if (matches_labels and
+                cf_df_row['github_hostname'] == project_id_row['github_hostname'] and
                 cf_df_row['repo_owner'] == project_id_row['repo_owner'] and
-                cf_df_row['repo_name'] == project_id_row['repo_name']): # If project ID matches current project ID...
+                cf_df_row['repo_owner'] == project_id_row['repo_owner'] and
+                cf_df_row['path_in_repo'] == project_id_row['path_in_repo']): # If project ID matches current project ID...
                 
                 commit_hashes.append(cf_df_row['commit_hash']);
                 
@@ -343,18 +354,21 @@ def get_project_summaries_df(commit_info_df, project_ids_df, attributes):
                 num_lines_deleted = num_lines_deleted + cf_df_row['num_lines_deleted'];
                 num_lines_modified = num_lines_modified + cf_df_row['num_lines_modified'];
 
+        summary_df.iloc[0]['github_hostname'] = project_id_row['github_hostname'];
         summary_df.iloc[0]['repo_owner'] = project_id_row['repo_owner'];
         summary_df.iloc[0]['repo_name'] = project_id_row['repo_name'];
+        summary_df.iloc[0]['path_in_repo'] = project_id_row['path_in_repo'];
         summary_df.iloc[0]['total_num_commits'] = len(list(set(commit_hashes)));
         #summary_df.iloc[0]['total_num_files_changed'] = len(list(set(filenames)));
         summary_df.iloc[0]['total_num_lines_changed'] = num_lines_changed;
-        summary_df.iloc[0]['total_num_insertions'] = num_lines_inserted;
-        summary_df.iloc[0]['total_num_deletions'] = num_lines_deleted;
-        summary_df.iloc[0]['total_num_modifications'] = num_lines_modified;
+        summary_df.iloc[0]['total_num_lines_inserted'] = num_lines_inserted;
+        summary_df.iloc[0]['total_num_lines_deleted'] = num_lines_deleted;
+        summary_df.iloc[0]['total_num_lines_modified'] = num_lines_modified;
         
         epochs = list(set(epochs));
 
-        for dtd_code in args.dt_deltas:
+        global dt_deltas;
+        for dtd_code in dt_deltas:
 
             num_dtds = get_num_dtds(epochs, dtd_code);
             dtd_name = DTD_NAMES[dtd_code];
@@ -372,9 +386,9 @@ def get_project_summaries_df(commit_info_df, project_ids_df, attributes):
 attr_labels_dict = {'total_num_commits' : 'Total Number of Commits',
                     #'total_num_files_changed' : 'Total Number of Files Changed',
                     'total_num_lines_changed' : 'Total Number of Lines Changed',
-                    'total_num_insertions' : 'Total Number of Lines Inserted',
-                    'total_num_deletions' : 'Total Number of Lines Deleted',
-                    'total_num_modifications' : 'Total Number of Lines Modified',
+                    'total_num_lines_inserted' : 'Total Number of Lines Inserted',
+                    'total_num_lines_deleted' : 'Total Number of Lines Deleted',
+                    'total_num_lines_modified' : 'Total Number of Lines Modified',
                     'total_num_years_active' : 'Total Number of Years Active',
                     'total_num_months_active' : 'Total Number of Months Active',
                     'total_num_days_active' : 'Total Number of Days Active',
@@ -475,7 +489,7 @@ def get_frequency_dist_df(attr, project_summaries_df, interval_df):
     
     row_indices = [i for i in range(0, num_intervals)];
     
-    column_labels = [attr, '>=', '<', 'frequency', 'percentage_in_interval', 'cumulative_frequency', 'cumulative_percentage'];
+    column_labels = [attr, '>=', '<', 'frequency', 'cumulative_frequency', 'percentage', 'cumulative_percentage'];
     
     df = pandas.DataFrame(index=row_indices, columns=column_labels);
     df = df.fillna(0.0);
@@ -500,24 +514,24 @@ def get_frequency_dist_df(attr, project_summaries_df, interval_df):
                 frequency = df.iloc[i]['frequency'];
                 df.iloc[i]['frequency'] = frequency + 1;
                 
-                frequency = df.iloc[i]['frequency'];
-                df.iloc[i]['percentage_in_interval'] = (float(frequency) / float(num_projects)) * 100.0;
-                
                 frequencies = [df.iloc[c]['frequency'] for c in range(0, i+1)]; # Get frequency totals (up to and including this one) as a list.
                 df.iloc[i]['cumulative_frequency'] = sum(frequencies);
+                
+                frequency = df.iloc[i]['frequency'];
+                df.iloc[i]['percentage'] = (float(frequency) / float(num_projects)) * 100.0;
                 
                 cumulative_frequency = df.iloc[i]['cumulative_frequency'];
                 df.iloc[i]['cumulative_percentage'] = (float(cumulative_frequency) / float(num_projects)) * 100.0;
     
-    dfw = df.drop(['>=', '<'], axis=1);    
+    #dfw = df.drop(['>=', '<'], axis=1);    
     
-    pathname, file_ext = os.path.splitext(args.data_store);
-    dir_name = args.directory if args.directory else os.path.dirname(pathname);
-    filename = os.path.basename(pathname);
-    xlsfile = dir_name + '/' + attr + '-' + filename + '.xlsx';
-    sh.write_df_to_file(dfw, "frequency_distribution", xlsfile);
-    global xlsfiles;
-    xlsfiles.append(xlsfile);
+    #pathname, file_ext = os.path.splitext(args.data_store);
+    #dir_name = args.directory if args.directory else os.path.dirname(pathname);
+    #filename = os.path.basename(pathname);
+    #xlsfile = dir_name + '/' + attr + '-' + filename + '.xlsx';
+    #sh.write_df_to_file(dfw, "frequency_distribution", xlsfile);
+    #global xlsfiles;
+    #xlsfiles.append(xlsfile);
     
     return df;
 
@@ -565,6 +579,7 @@ def get_interval_df(attr, project_summaries_df):
     COLUMN_LABELS = ['>=', '<'];
 
     global iwidths_dict;
+    global icounts_dict;
     if (attr in iwidths_dict):
 
         print("Attribute \'" + attr + "\' found");
@@ -576,6 +591,33 @@ def get_interval_df(attr, project_summaries_df):
         max_val = max(values);
 
         num_intervals = int(max_val / iwidth) + 1;
+
+        row_labels = [i for i in range(0, num_intervals+1)];
+        df = pandas.DataFrame(index=row_labels, columns=COLUMN_LABELS);
+        df.fillna(0.0);
+        
+        df.iloc[0]['>='] = 0;
+        df.iloc[0]['<'] = 1;
+        for i in range(0, num_intervals):
+
+            s = i * iwidth;
+            df.iloc[i+1]['>='] = s + 1;
+            df.iloc[i+1]['<'] = s + iwidth + 1;
+
+
+    elif (attr in icounts_dict):
+
+        print("Attribute \'" + attr + "\' found");
+
+        icount = int(icounts_dict[attr]);
+
+        values = project_summaries_df[attr].tolist();
+
+        max_val = max(values);
+
+        num_intervals = icount + 1;
+
+        iwidth = (max_val / icount) + 1;
 
         row_labels = [i for i in range(0, num_intervals+1)];
         df = pandas.DataFrame(index=row_labels, columns=COLUMN_LABELS);
@@ -623,16 +665,16 @@ def get_project_attr_frequency_dist_df(attr, project_summaries_df):
     
     row_labels = [i for i in range(0, num_projects)];
     
-    COLUMN_LABELS = ['repo_owner',
+    COLUMN_LABELS = ['github_hostname',
+                     'repo_owner',
                      'repo_name',
-                     #'path_in_repo',
-                     #'path_to_repo',
+                     'path_in_repo',
                      attr,
                      '>=',
                      '<',
                      'frequency',
-                     'percentage_in_interval',
                      'cumulative_frequency',
+                     'percentage',
                      'cumulative_percentage'];
     
     df = pandas.DataFrame(index=row_labels, columns=COLUMN_LABELS);
@@ -656,16 +698,18 @@ def get_project_attr_frequency_dist_df(attr, project_summaries_df):
             if (float(attr_value) >= float(frequency_dist_row['>=']) and
                 float(attr_value) < float(frequency_dist_row['<'])):
                 
+                df.iloc[i]['github_hostname'] = project_summaries_row['github_hostname'];
                 df.iloc[i]['repo_owner'] = project_summaries_row['repo_owner'];
                 df.iloc[i]['repo_name'] = project_summaries_row['repo_name'];
+                df.iloc[i]['path_in_repo'] = project_summaries_row['path_in_repo'];
                 #df.iloc[i]['path_in_repo'] = project_summaries_row['path_in_repo'];
                 #df.iloc[i]['path_to_repo'] = project_summaries_row['path_to_repo'];
                 df.iloc[i][attr] = attr_value;
                 df.iloc[i]['>='] = frequency_dist_row['>='];
                 df.iloc[i]['<'] = frequency_dist_row['<'];
                 df.iloc[i]['frequency'] = frequency_dist_row['frequency'];
-                df.iloc[i]['percentage_in_interval'] = frequency_dist_row['percentage_in_interval'];
                 df.iloc[i]['cumulative_frequency'] = frequency_dist_row['cumulative_frequency'];
+                df.iloc[i]['percentage'] = frequency_dist_row['percentage'];
                 df.iloc[i]['cumulative_percentage'] = frequency_dist_row['cumulative_percentage'];
     
     df = df.sort_values(by=[attr]);
@@ -707,11 +751,13 @@ def main():
         attributes = ['total_num_commits',
                       #'total_num_files_changed',
                       'total_num_lines_changed',
-                      'total_num_insertions',
-                      'total_num_deletions',
-                      'total_num_modifications'];
+                      'total_num_lines_inserted',
+                      'total_num_lines_deleted',
+                      'total_num_lines_modified'];
         dtd_code_labels = list();
-        for dtd_code in args.dt_deltas:
+        global dt_deltas;
+        dt_deltas = ['d'];
+        for dtd_code in dt_deltas:
 
             dtd_name = DTD_NAMES[dtd_code];
             dtd_code_labels.append(dtd_name);
@@ -738,7 +784,7 @@ def main():
             pathname, file_ext = os.path.splitext(args.data_store);
             dir_name = args.directory if args.directory else os.path.dirname(pathname);
             filename = os.path.basename(pathname);
-            xlsfile = dir_name + '/' + attr + '-all_repos-' + filename + '.xlsx';
+            xlsfile = dir_name + '/' + attr + '-' + filename + '.xlsx';
             sh.write_df_to_file(project_attr_frequency_dist_df, attr, xlsfile);
             xlsfiles.append(xlsfile);
             #print("ATTRIBUTE: " + attr);
