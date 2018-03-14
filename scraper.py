@@ -23,6 +23,7 @@ ds_df = None; # Data store DataFrame.
 
 path_to_repo = ''; # Local environment path to repository.
 
+github_hostname = ''; # Identifier for GitHub service.
 repo_owner = ''; # Identifier for repository owner.
 repo_name = ''; # Identifier for repository name.
 path_in_repo = ''; # Path in repository commit log refers to.
@@ -103,24 +104,30 @@ def echo_args():
     print("[global] Until: " + args.until);
 
 
-# Extract repo owner and name from remote origin URL.
-def extract_repo_owner_and_name(remote_origin_url):
+# Extract GitHub hostname, and repo owner and name from remote origin URL.
+def get_repo_id(remote_origin_url):
     
-    repo_owner = '';
-    repo_name = '';
+    ssh_url = re.findall(r'git@.+:.+/.+', remote_origin_url);
+    git_url = re.findall(r'git://.+/.+/.+', remote_origin_url);
+    http_url = re.findall(r'http[s]?://.+/.+/.+', remote_origin_url);
     
-    (scheme, netloc, path, params, query, fragment) = urlparse.urlparse(remote_origin_url);
-    
-    if (not scheme): # This is a git URL...
-        path = remote_origin_url.split(':')[1];
-    
-    repo_owner = os.path.basename(os.path.abspath(os.path.join(path, os.pardir))); # Get name of parent dir in path.
-    repo_name = os.path.basename(path);
-    
-    if (repo_name.endswith('.git')):
-        repo_name = repo_name[:-4]; # Remove the '.git' from repo name.
-    
-    return repo_owner, repo_name;
+    if (ssh_url):
+        ssh_url = ssh_url[0];
+        print "SSH"
+        (host, owner, name) = re.findall(r'git@(.+):(.+)/(.+)', ssh_url)[0];
+    elif (git_url):
+        git_url = git_url[0];
+        print "GIT"
+        (host, owner, name) = re.findall(r'git://(.+)/(.+)/(.+)', git_url)[0];
+    elif (http_url):
+        http_url = http_url[0];
+        print "HTTP"
+        (host, owner, name) = re.findall(r'http[s]?://(.+)/(.+)/(.+)', http_url)[0];
+
+    if (name.endswith('.git')):
+        name = name[:-4]; # Remove the '.git' from repo name.
+
+    return host, owner, name;
 
 
 # Parse information on files affected in a single commit.
@@ -234,12 +241,13 @@ def get_gitlog_str():
 # Inspired by a blog post by Steven Kryskalla: http://blog.lost-theory.org/post/how-to-parse-git-log-output/
 def get_commits_df():
 
+    global github_hostname;
     global repo_owner;
     global repo_name;
     global path_in_repo;
     global labels_for_repo;
 
-    COLUMN_LABELS = ['repo_owner', 'repo_name',
+    COLUMN_LABELS = ['github_hostname', 'repo_owner', 'repo_name',
                      'path_in_repo',
                      'labels',
                      'commit_hash',
@@ -328,6 +336,7 @@ def get_commits_df():
         
             row = commits_df.iloc[i];
 
+            row['github_hostname'] = github_hostname;
             row['repo_owner'] = repo_owner;
             row['repo_name'] = repo_name;
             row['path_in_repo'] = path_in_repo;
@@ -416,6 +425,7 @@ def main():
     
     global args;
     global path_to_repo;
+    global github_hostname;
     global repo_owner;
     global repo_name;
     global path_in_repo;
@@ -443,8 +453,9 @@ def main():
         path_to_repo = os.path.abspath(path_to_repo);
         
         remote_origin_url = sh.get_remote_origin_url(path_to_repo);
-        repo_owner, repo_name = extract_repo_owner_and_name(remote_origin_url);
+        github_hostname, repo_owner, repo_name = get_repo_id(remote_origin_url);
         if (args.anonymize):
+            github_hostname = sh.get_hash_str(github_hostname);
             repo_owner = sh.get_hash_str(repo_owner);
             repo_name = sh.get_hash_str(repo_name);
 
