@@ -107,14 +107,14 @@ def echo_args():
 # Extract GitHub hostname, and repo owner and name from remote origin URL.
 def get_repo_id(remote_origin_url):
     
-    ssh_url = re.findall(r'git@.+:.+/.+', remote_origin_url);
+    ssh_url = re.findall(r'git@.+[:|/].+/.+', remote_origin_url);
     git_url = re.findall(r'git://.+/.+/.+', remote_origin_url);
     http_url = re.findall(r'http[s]?://.+/.+/.+', remote_origin_url);
     
     if (ssh_url):
         ssh_url = ssh_url[0];
         print "SSH"
-        (host, owner, name) = re.findall(r'git@(.+):(.+)/(.+)', ssh_url)[0];
+        (host, owner, name) = re.findall(r'git@(.+)[:|/](.+)/(.+)', ssh_url)[0];
     elif (git_url):
         git_url = git_url[0];
         print "GIT"
