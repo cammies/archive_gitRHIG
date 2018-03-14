@@ -104,30 +104,17 @@ def echo_args():
     print("[global] Until: " + args.until);
 
 
-# Extract GitHub hostname, and repo owner and name from remote origin URL.
+# Extract GitHub hostname, repo owner, and repo name from remote origin URL.
 def get_repo_id(remote_origin_url):
     
-    ssh_url = re.findall(r'git@.+[:|/].+/.+', remote_origin_url);
-    git_url = re.findall(r'git://.+/.+/.+', remote_origin_url);
-    http_url = re.findall(r'http[s]?://.+/.+/.+', remote_origin_url);
+    url = re.findall(r'^.+[://|@].+[:|/].+/.+', remote_origin_url);
+
+    (github_hostname, repo_owner, repo_name) = re.findall(r'^.+[://|@](.+)[:|/](.+)/(.+)', url[0])[0];
     
-    if (ssh_url):
-        ssh_url = ssh_url[0];
-        print "SSH"
-        (host, owner, name) = re.findall(r'git@(.+)[:|/](.+)/(.+)', ssh_url)[0];
-    elif (git_url):
-        git_url = git_url[0];
-        print "GIT"
-        (host, owner, name) = re.findall(r'git://(.+)/(.+)/(.+)', git_url)[0];
-    elif (http_url):
-        http_url = http_url[0];
-        print "HTTP"
-        (host, owner, name) = re.findall(r'http[s]?://(.+)/(.+)/(.+)', http_url)[0];
+    if (repo_name.endswith('.git')):
+        repo_name = repo_name[:-4]; # Remove the '.git' from repo name.
 
-    if (name.endswith('.git')):
-        name = name[:-4]; # Remove the '.git' from repo name.
-
-    return host, owner, name;
+    return github_hostname, repo_owner, repo_name;
 
 
 # Parse information on files affected in a single commit.
@@ -279,20 +266,9 @@ def get_commits_df():
 
     if (gitlog_str):
 
-        #field_groups = gitlog_str.strip('\n\x1e').split('\x1e'); # Split commit records.
-        #del gitlog_str;
-
-        #num_commits = 0;
         commit_groups = (commit_group.strip('\x1e\x1e\x1e') for commit_group in gitlog_str.split('\n\x1e\x1e\x1e')); # Split commit records.
-        #del gitlog_str;
 
-        #for fg in field_groups:
-        #    print fg
-        #    print "Fabian"
-        #commit_groups = commit_groups[1:]; # Get rid of the first element - it is an empty string.
-        #num_commits = len(list(commit_groups));
         (commit_groups, count_commit_groups) = itertools.tee(commit_groups, 2);
-        #count_commit_groups.next(); # Skip the first one.
         num_commits = sum(1 for cg in count_commit_groups);
         
         ROW_LABELS = [r for r in range(0, num_commits)];
@@ -302,7 +278,6 @@ def get_commits_df():
         t1 = datetime.datetime.now();
         j = 0; # Number records processed.
         k = 0.0; # Probability of records processed.
-        #commit_groups.next(); # Skip the first one.
         for i in range(0, num_commits):
 
             commit_group = commit_groups.next();
