@@ -234,23 +234,6 @@ def get_commits_df():
     global path_in_repo;
     global labels_for_repo;
 
-    COLUMN_LABELS = ['github_hostname', 'repo_owner', 'repo_name',
-                     'path_in_repo',
-                     'labels',
-                     'commit_hash',
-                     'author_name', 'author_email', 'author_epoch',
-                     'committer_name', 'committer_email', 'committer_epoch',
-                     'subject', 'len_subject',
-                     'num_files_changed',
-                     'num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
-    
-    # Initial commit field names.
-    COMMIT_FIELD_NAMES = ['commit_hash',
-                          'author_name', 'author_email', 'author_epoch',
-                          'committer_name', 'committer_email', 'committer_epoch',
-                          'subject',
-                          'patch_str'];
-    
     sys.stdout.write("\r");
     sys.stdout.write("[git] Retrieving commit log: ...");
     sys.stdout.flush();
@@ -272,6 +255,23 @@ def get_commits_df():
         num_commits = sum(1 for cg in count_commit_groups);
         
         ROW_LABELS = [r for r in range(0, num_commits)];
+        
+        COLUMN_LABELS = ['github_hostname', 'repo_owner', 'repo_name',
+                         'path_in_repo',
+                         'labels',
+                         'commit_hash',
+                         'author_name', 'author_email', 'author_epoch',
+                         'committer_name', 'committer_email', 'committer_epoch',
+                         'subject', 'len_subject',
+                         'num_files_changed',
+                         'num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
+        
+        # Initial commit field names.
+        COMMIT_FIELD_NAMES = ['commit_hash',
+                              'author_name', 'author_email', 'author_epoch',
+                              'committer_name', 'committer_email', 'committer_epoch',
+                              'subject',
+                              'patch_str'];
         
         commits_df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
         

@@ -477,39 +477,39 @@ def process_distribution_figs(attr, project_summaries_df):
     process_cdf(attr_values, attr_label);
 
 
-# Get preliminary frequency distribution DataFrame for a group of project summaries for some attrbute.
-def get_frequency_dist_df(attr, project_summaries_df, interval_df):
+# Get preliminary frequency distribution DataFrame for a group of project summaries for some feature.
+def get_freq_dist_df(feature, project_summaries_df, feature_intervals_df):
     
-    interval_df = interval_df.sort_values(by=['>=']); # Sort.
-    interval_df = interval_df.reset_index(drop=True); # Reset DataFrame index.
+    feature_intervals_df = feature_intervals_df.sort_values(by=['>=']); # Sort by interval begin-value.
+    feature_intervals_df = feature_intervals_df.reset_index(drop=True); # Reset DataFrame index.
     
     num_projects = project_summaries_df.shape[0];
     
-    num_intervals = interval_df.shape[0];
+    num_intervals = feature_intervals_df.shape[0];
     
-    row_indices = [i for i in range(0, num_intervals)];
+    ROW_LABELS = [r for r in range(0, num_intervals)];
     
-    column_labels = [attr, '>=', '<', 'frequency', 'cumulative_frequency', 'percentage', 'cumulative_percentage'];
+    COLUMN_LABELS = [feature, '>=', '<', 'frequency', 'cumulative_frequency', 'percentage', 'cumulative_percentage'];
     
-    df = pandas.DataFrame(index=row_indices, columns=column_labels);
+    df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
     df = df.fillna(0.0);
     
     for i in range(0, num_intervals): # For each interval...
         
-        interval_row = interval_df.iloc[i];
-        df.iloc[i]['>='] = interval_row['>='];
-        df.iloc[i]['<'] = interval_row['<'];
+        feature_interval = feature_intervals_df.iloc[i];
+        df.iloc[i]['>='] = feature_interval['>='];
+        df.iloc[i]['<'] = feature_interval['<'];
         
         for j in range(0, num_projects): # For each project summary...
             
-            project_summary_row = project_summaries_df.iloc[j];
+            project_summary = project_summaries_df.iloc[j];
             
-            attr_value = project_summary_row[attr];
+            feature_value = project_summary[feature];
             
-            if (float(attr_value) >= float(interval_row['>=']) and
-                float(attr_value) < float(interval_row['<'])):
+            if (float(feature_value) >= float(feature_interval['>=']) and
+                float(feature_value) < float(feature_interval['<'])):
 
-                df.iloc[i][attr] = attr_value;
+                df.iloc[i][feature] = feature_value;
                 
                 frequency = df.iloc[i]['frequency'];
                 df.iloc[i]['frequency'] = frequency + 1;
@@ -522,16 +522,6 @@ def get_frequency_dist_df(attr, project_summaries_df, interval_df):
                 
                 cumulative_frequency = df.iloc[i]['cumulative_frequency'];
                 df.iloc[i]['cumulative_percentage'] = (float(cumulative_frequency) / float(num_projects)) * 100.0;
-    
-    #dfw = df.drop(['>=', '<'], axis=1);    
-    
-    #pathname, file_ext = os.path.splitext(args.data_store);
-    #dir_name = args.directory if args.directory else os.path.dirname(pathname);
-    #filename = os.path.basename(pathname);
-    #xlsfile = dir_name + '/' + attr + '-' + filename + '.xlsx';
-    #sh.write_df_to_file(dfw, "frequency_distribution", xlsfile);
-    #global xlsfiles;
-    #xlsfiles.append(xlsfile);
     
     return df;
 
@@ -572,7 +562,7 @@ def get_interval_end(num):
 
 
 #
-def get_interval_df(attr, project_summaries_df):
+def get_feature_intervals_df(attr, project_summaries_df):
     
     df = pandas.DataFrame();
 
@@ -655,21 +645,21 @@ def get_interval_df(attr, project_summaries_df):
     return interval_df;
 
 
-# Get frequency distribution DataFrame for a group of project summaries for some attrbute.
-def get_project_attr_frequency_dist_df(attr, project_summaries_df):
+# Get frequency distribution DataFrame for a group of project summaries for some feature.
+def get_feature_freq_dist_df(feature, project_summaries_df):
     
-    project_summaries_df = project_summaries_df.sort_values(by=[attr]); # Sort.
+    project_summaries_df = project_summaries_df.sort_values(by=[feature]); # Sort by values in feature observations.
     project_summaries_df = project_summaries_df.reset_index(drop=True); # Reset DataFrame index.
     
     num_projects = project_summaries_df.shape[0];
     
-    row_labels = [i for i in range(0, num_projects)];
+    ROW_LABELS = [r for r in range(0, num_projects)];
     
     COLUMN_LABELS = ['github_hostname',
                      'repo_owner',
                      'repo_name',
                      'path_in_repo',
-                     attr,
+                     feature,
                      '>=',
                      '<',
                      'frequency',
@@ -677,42 +667,40 @@ def get_project_attr_frequency_dist_df(attr, project_summaries_df):
                      'percentage',
                      'cumulative_percentage'];
     
-    df = pandas.DataFrame(index=row_labels, columns=COLUMN_LABELS);
+    df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
     df.fillna(0.0);
     
-    interval_df = get_interval_df(attr, project_summaries_df);
+    feature_intervals_df = get_feature_intervals_df(feature, project_summaries_df);
     
-    frequency_dist_df = get_frequency_dist_df(attr, project_summaries_df, interval_df);
+    freq_dist_df = get_freq_dist_df(feature, project_summaries_df, feature_intervals_df);
     
-    num_frequency_dists = frequency_dist_df.shape[0];
+    num_freq_dists = freq_dist_df.shape[0];
     
     for i in range(0, num_projects): # For each project summary...
         
-        project_summaries_row = project_summaries_df.iloc[i]; # Get project summary record (row).
-        attr_value = project_summaries_row[attr]; # Get project attribute value.
+        project_summary = project_summaries_df.iloc[i]; # Get project summary record (row).
+        feature_value = project_summary[feature]; # Get project attribute value.
         
-        for j in range(0, num_frequency_dists):
+        for j in range(0, num_freq_dists):
             
-            frequency_dist_row = frequency_dist_df.iloc[j];
+            freq_dist = freq_dist_df.iloc[j];
             
-            if (float(attr_value) >= float(frequency_dist_row['>=']) and
-                float(attr_value) < float(frequency_dist_row['<'])):
+            if (float(feature_value) >= float(freq_dist['>=']) and
+                float(feature_value) < float(freq_dist['<'])):
                 
-                df.iloc[i]['github_hostname'] = project_summaries_row['github_hostname'];
-                df.iloc[i]['repo_owner'] = project_summaries_row['repo_owner'];
-                df.iloc[i]['repo_name'] = project_summaries_row['repo_name'];
-                df.iloc[i]['path_in_repo'] = project_summaries_row['path_in_repo'];
-                #df.iloc[i]['path_in_repo'] = project_summaries_row['path_in_repo'];
-                #df.iloc[i]['path_to_repo'] = project_summaries_row['path_to_repo'];
-                df.iloc[i][attr] = attr_value;
-                df.iloc[i]['>='] = frequency_dist_row['>='];
-                df.iloc[i]['<'] = frequency_dist_row['<'];
-                df.iloc[i]['frequency'] = frequency_dist_row['frequency'];
-                df.iloc[i]['cumulative_frequency'] = frequency_dist_row['cumulative_frequency'];
-                df.iloc[i]['percentage'] = frequency_dist_row['percentage'];
-                df.iloc[i]['cumulative_percentage'] = frequency_dist_row['cumulative_percentage'];
+                df.iloc[i]['github_hostname'] = project_summary['github_hostname'];
+                df.iloc[i]['repo_owner'] = project_summary['repo_owner'];
+                df.iloc[i]['repo_name'] = project_summary['repo_name'];
+                df.iloc[i]['path_in_repo'] = project_summary['path_in_repo'];
+                df.iloc[i][feature] = feature_value;
+                df.iloc[i]['>='] = freq_dist['>='];
+                df.iloc[i]['<'] = freq_dist['<'];
+                df.iloc[i]['frequency'] = freq_dist['frequency'];
+                df.iloc[i]['cumulative_frequency'] = freq_dist['cumulative_frequency'];
+                df.iloc[i]['percentage'] = freq_dist['percentage'];
+                df.iloc[i]['cumulative_percentage'] = freq_dist['cumulative_percentage'];
     
-    df = df.sort_values(by=[attr]);
+    df = df.sort_values(by=[feature]);
     
     return df;
 
@@ -749,7 +737,6 @@ def main():
         print("Done.");
         
         attributes = ['total_num_commits',
-                      #'total_num_files_changed',
                       'total_num_lines_changed',
                       'total_num_lines_inserted',
                       'total_num_lines_deleted',
@@ -779,7 +766,7 @@ def main():
             
             process_distribution_figs(attr, project_summaries_df);
             
-            project_attr_frequency_dist_df = get_project_attr_frequency_dist_df(attr, project_summaries_df);
+            project_attr_frequency_dist_df = get_feature_freq_dist_df(attr, project_summaries_df);
             
             pathname, file_ext = os.path.splitext(args.data_store);
             dir_name = args.directory if args.directory else os.path.dirname(pathname);
@@ -787,8 +774,6 @@ def main():
             xlsfile = dir_name + '/' + attr + '-' + filename + '.xlsx';
             sh.write_df_to_file(project_attr_frequency_dist_df, attr, xlsfile);
             xlsfiles.append(xlsfile);
-            #print("ATTRIBUTE: " + attr);
-            #print("Frequency distribution saved to \'" + xlsfile + "\'.");
         print("Done.");
         print('');
 
