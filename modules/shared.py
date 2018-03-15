@@ -528,7 +528,7 @@ def write_df_to_file(df, title, destination):
 # Get data store DataFrame.
 def load_commits_data_store(data_store):
     
-    COLUMN_LABELS = ['repo_owner', 'repo_name',
+    COLUMN_LABELS = ['github_hostname', 'repo_owner', 'repo_name',
                      'path_in_repo',
                      'labels',
                      'commit_hash',

@@ -179,7 +179,7 @@ def get_dated_labelled_rows(ds_df):
 
 
 # Determine project (calculated) IDs from data store.
-def get_project_ids(ds_df):
+def get_project_ids_df(ds_df):
 
     project_ids_df = ds_df[['github_hostname', 'repo_owner', 'repo_name', 'path_in_repo']];#, 'path_in_repo']];#, 'path_to_repo']];
     project_ids_df = project_ids_df.drop_duplicates().reset_index(drop=True);
@@ -187,23 +187,10 @@ def get_project_ids(ds_df):
     return project_ids_df;
 
 
-# Plot repository timelines for some data set.
-def process_timelines(df, p):
-        
-    data = dict(df);
-    
-    source = bokeh.plotting.ColumnDataSource(data=data);
-    
-    p.circle('committer_epoch', 'project_index', source=source, line_color='green');
-    p.line('committer_epoch', 'project_index', source=source, line_color='green');
-    
-    return p;
-
-
 # Plot CDF for some feature.
-def process_new_cdf(feature, df, p):
+def process_new_cdf(feature, feature_freq_dist_df, p):
         
-    data = dict(df);
+    data = dict(feature_freq_dist_df);
     
     source = bokeh.plotting.ColumnDataSource(data=data);
     
@@ -220,16 +207,16 @@ def get_cdf(feature, feature_freq_dist_df):
     
     num_projects = feature_freq_dist_df.shape[0];
     
-    cdf_data = list();
+    cumulative_probabilities = list();
     for i, row in feature_freq_dist_df.iterrows(): # Format committer dates.
 
         cumulative_percentage = float(row['cumulative_percentage']);
         
-        probability = cumulative_percentage / 100.0;
+        cumulative_probability = cumulative_percentage / 100.0;
 
-        cdf_data.append(probability); 
+        cumulative_probabilities.append(cumulative_probability);
 
-    feature_freq_dist_df['cumulative_probability'] = cdf_data; # Add new column for CDF data as strings.
+    feature_freq_dist_df['cumulative_probability'] = cumulative_probabilities; # Add new column for CDF data as strings.
     
     hover = bokeh.models.HoverTool(tooltips=[('github_hostname', '@github_hostname'),
                                              ('repo_owner', '@repo_owner'),
@@ -257,12 +244,22 @@ def get_cdf(feature, feature_freq_dist_df):
     p.yaxis.major_label_text_font_size=font_size;
     p.yaxis.axis_label_text_font_size=font_size;
 
-    #for j in range(0, num_projects): # For each project...
-
-    df = feature_freq_dist_df#.iloc[j];
-    p = process_new_cdf(feature, df, p);
+    p = process_new_cdf(feature, feature_freq_dist_df, p);
 
     figs_list.append(p);
+
+
+# Plot repository timelines for some data set.
+def process_timelines(df, p):
+        
+    data = dict(df);
+    
+    source = bokeh.plotting.ColumnDataSource(data=data);
+    
+    p.circle('committer_epoch', 'project_index', source=source, line_color='green', fill_color='green');
+    p.line('committer_epoch', 'project_index', source=source, line_color='green');
+    
+    return p;
 
 
 # Get plot containing development timeline for each repository.
@@ -282,7 +279,8 @@ def get_project_timelines(project_ids_df, ds_df):
 
     ds_df['committer_date'] = committer_dates; # Add new column for committer dates as strings.
     
-    hover = bokeh.models.HoverTool(tooltips=[('repo_owner', '@repo_owner'),
+    hover = bokeh.models.HoverTool(tooltips=[('github_hostname', '@github_hostname'),
+                                             ('repo_owner', '@repo_owner'),
                                              ('repo_name', '@repo_name'),
                                              ('path_in_repo', '@path_in_repo'),
                                              ('date', '@committer_date'),
@@ -758,8 +756,6 @@ def get_feature_freq_dist_df(feature, project_summaries_df):
 def main():
     
     global args;
-    #global commit_info_df;
-    #global committed_files_df;
     global ds_df;
     global xlsfiles;
     
@@ -782,7 +778,7 @@ def main():
         bokeh.plotting.output_file(htmlfile, title="Project Statistics");
 
         print("Identifying projects...");
-        project_ids_df = get_project_ids(ds_df);
+        project_ids_df = get_project_ids_df(ds_df);
         print("Done.");
         
         attributes = ['total_num_commits',
