@@ -190,8 +190,6 @@ def get_project_ids(ds_df):
 # Plot repository timelines for some data set.
 def process_timelines(df, p):
         
-    global font_size;
-    
     data = dict(df);
     
     source = bokeh.plotting.ColumnDataSource(data=data);
@@ -202,6 +200,71 @@ def process_timelines(df, p):
     return p;
 
 
+# Plot CDF for some feature.
+def process_new_cdf(feature, df, p):
+        
+    data = dict(df);
+    
+    source = bokeh.plotting.ColumnDataSource(data=data);
+    
+    p.circle(feature, 'cumulative_probability', source=source, line_color='red', fill_color='red');
+    p.line(feature, 'cumulative_probability', source=source, line_color='red');
+    
+    return p;
+
+
+# Get plot containing development timeline for each repository.
+def get_cdf(feature, feature_freq_dist_df):
+    
+    global figs_list;
+    
+    num_projects = feature_freq_dist_df.shape[0];
+    
+    cdf_data = list();
+    for i, row in feature_freq_dist_df.iterrows(): # Format committer dates.
+
+        cumulative_percentage = float(row['cumulative_percentage']);
+        
+        probability = cumulative_percentage / 100.0;
+
+        cdf_data.append(probability); 
+
+    feature_freq_dist_df['cumulative_probability'] = cdf_data; # Add new column for CDF data as strings.
+    
+    hover = bokeh.models.HoverTool(tooltips=[('github_hostname', '@github_hostname'),
+                                             ('repo_owner', '@repo_owner'),
+                                             ('repo_name', '@repo_name'),
+                                             ('path_in_repo', '@path_in_repo'),
+                                             (feature, '@'+feature)]);
+    
+    title = "Cumulative Distribution Function (N=" + str(num_projects) + ")";
+    
+    feature_title = feature_titles_dict[feature];
+
+    p = bokeh.plotting.figure(#plot_width=400,
+                              #plot_height=400,
+                              tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save, ''reset'],
+                              title=title,
+                              x_axis_label=feature_title,
+                              y_axis_label='Probability',
+                              y_range=bokeh.models.Range1d(0, 1, bounds='auto')
+                              );
+    
+    p.title.align='center';
+    p.title.text_font_size=font_size;
+    p.xaxis.major_label_text_font_size=font_size;
+    p.xaxis.axis_label_text_font_size=font_size;
+    p.yaxis.major_label_text_font_size=font_size;
+    p.yaxis.axis_label_text_font_size=font_size;
+
+    #for j in range(0, num_projects): # For each project...
+
+    df = feature_freq_dist_df#.iloc[j];
+    p = process_new_cdf(feature, df, p);
+
+    figs_list.append(p);
+
+
 # Get plot containing development timeline for each repository.
 def get_project_timelines(project_ids_df, ds_df):
     
@@ -209,7 +272,7 @@ def get_project_timelines(project_ids_df, ds_df):
     
     num_projects = project_ids_df.shape[0];
     
-    committer_dates = list()
+    committer_dates = list();
     for i, row in ds_df.iterrows(): # Format committer dates.
 
         dt = datetime.datetime.fromtimestamp(float(row["committer_epoch"]));
@@ -383,18 +446,18 @@ def get_project_summaries_df(commit_info_df, project_ids_df, attributes):
 
 
 # Dict of commit attributes names in plain English.
-attr_labels_dict = {'total_num_commits' : 'Total Number of Commits',
-                    #'total_num_files_changed' : 'Total Number of Files Changed',
-                    'total_num_lines_changed' : 'Total Number of Lines Changed',
-                    'total_num_lines_inserted' : 'Total Number of Lines Inserted',
-                    'total_num_lines_deleted' : 'Total Number of Lines Deleted',
-                    'total_num_lines_modified' : 'Total Number of Lines Modified',
-                    'total_num_years_active' : 'Total Number of Years Active',
-                    'total_num_months_active' : 'Total Number of Months Active',
-                    'total_num_days_active' : 'Total Number of Days Active',
-                    'total_num_hours_active' : 'Total Number of Hours Active',
-                    'total_num_minutes_active' : 'Total Number of Minutes Active',
-                    'total_num_seconds_active' : 'Total Number of Seconds Active'}
+feature_titles_dict = {'total_num_commits' : 'Total Number of Commits',
+                       #'total_num_files_changed' : 'Total Number of Files Changed',
+                       'total_num_lines_changed' : 'Total Number of Lines Changed',
+                       'total_num_lines_inserted' : 'Total Number of Lines Inserted',
+                       'total_num_lines_deleted' : 'Total Number of Lines Deleted',
+                       'total_num_lines_modified' : 'Total Number of Lines Modified',
+                       'total_num_years_active' : 'Total Number of Years Active',
+                       'total_num_months_active' : 'Total Number of Months Active',
+                       'total_num_days_active' : 'Total Number of Days Active',
+                       'total_num_hours_active' : 'Total Number of Hours Active',
+                       'total_num_minutes_active' : 'Total Number of Minutes Active',
+                       'total_num_seconds_active' : 'Total Number of Seconds Active'}
 
 
 # Plot histogram for some data set.
@@ -466,15 +529,120 @@ def process_cdf(data, xlabel):
 
 
 # Plot graphs for each project feature vector feature.
-def process_distribution_figs(attr, project_summaries_df):
+def process_distribution_figs(feature, project_summaries_df):
 
-    attr_values = project_summaries_df[attr].tolist();
+    feature_values = project_summaries_df[feature].tolist();
 
-    attr_label = attr_labels_dict[attr];
+    feature_title = feature_titles_dict[feature];
 
-    process_histogram(attr_values, attr_label, 'Number of Projects');
+    process_histogram(feature_values, feature_title, 'Number of Projects');
 
-    process_cdf(attr_values, attr_label);
+    process_cdf(feature_values, feature_title);
+
+
+# Chop float at x decimals WITHOUT rounding.
+# Inspired by user Imre Kerr's answer: https://stackoverflow.com/questions/17264733/remove-decimal-places-to-certain-digits-without-rounding
+def chop_float(num, x):
+    
+    num_str = str(num);
+    num_str = num_str[:num_str.find('.') + x + 1];
+    chopped = float(num_str);
+    
+    return chopped;
+
+
+# Calculate interval begin.
+def calc_interval_begin(num):
+    
+    interval_begin = None;
+    if (float(num).is_integer()):
+        interval_begin = num;
+    else:
+        interval_begin = chop_float(num, 5);
+    
+    return interval_begin;
+
+
+# Calculate interval end.
+def calc_interval_end(num):
+    
+    interval_end = None;
+    if (float(num).is_integer()):
+        interval_end = num + 1;
+    else:
+        interval_end = chop_float(num, 5) + 0.01;
+    
+    return interval_end;
+
+
+#
+def get_feature_intervals_df(feature, project_summaries_df):
+    
+    COLUMN_LABELS = ['>=', '<'];
+
+    df = pandas.DataFrame();
+
+    global iwidths_dict;
+    global icounts_dict;
+    
+    if (feature in iwidths_dict or
+        feature in icounts_dict):
+
+        print("Attribute \'" + feature + "\' found");
+
+        values = project_summaries_df[feature].tolist();
+
+        max_val = max(values);
+
+        if (feature in iwidths_dict):
+
+            iwidth = int(iwidths_dict[feature]);
+
+            num_intervals = int(max_val / iwidth) + 1;
+
+        else: # feature is in icounts_dict...
+
+            icount = int(icounts_dict[feature]);
+
+            num_intervals = icount + 1;
+
+            iwidth = int(max_val / icount) + 1;
+
+        ROW_LABELS = [i for i in range(0, num_intervals+1)]; # '+1' because 0-1 will be its own interval.
+            
+        df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
+        df.fillna(0.0);
+            
+        df.iloc[0]['>='] = 0; # First interval will be from 0...
+        df.iloc[0]['<'] = 1; # ...to 1.
+        for i in range(0, num_intervals):
+
+            from_value = i * iwidth;
+            to_value = from_value + iwidth;
+            df.iloc[i+1]['>='] = calc_interval_begin(from_value+1); # '+1' to skip 0 in first loop.
+            df.iloc[i+1]['<'] = calc_interval_end(to_value);
+
+    else: # If user-defined interval info was left unspecified, use 1-unit width intervals.
+        
+        num_intervals = project_summaries_df.shape[0];
+        
+        ROW_LABELS = [r for r in range(0, num_intervals)];
+    
+        df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
+        df.fillna(0.0);
+        
+        for i in range(0, num_intervals): # For each project summary...
+            
+            from_value = project_summaries_df.iloc[i][feature]; # Get feature value for project i.
+            to_value = from_value; # (Since in this case, interval width is only a single unit.)
+            
+            df.iloc[i]['>='] = calc_interval_begin(from_value);
+            df.iloc[i]['<'] = calc_interval_end(to_value);
+    
+    intervals_df = df[['>=','<']];
+    intervals_df = intervals_df.drop_duplicates().reset_index(drop=True); # Eliminate duplicates.
+
+    return intervals_df;
 
 
 # Get preliminary frequency distribution DataFrame for a group of project summaries for some feature.
@@ -524,125 +692,6 @@ def get_freq_dist_df(feature, project_summaries_df, feature_intervals_df):
                 df.iloc[i]['cumulative_percentage'] = (float(cumulative_frequency) / float(num_projects)) * 100.0;
     
     return df;
-
-
-# Chop float at x decimals WITHOUT rounding.
-# Inspired by user Imre Kerr's answer: https://stackoverflow.com/questions/17264733/remove-decimal-places-to-certain-digits-without-rounding
-def chop_float(num, x):
-    
-    num_str = str(num);
-    num_str = num_str[:num_str.find('.') + x + 1];
-    chopped = float(num_str);
-    
-    return chopped;
-
-
-# Calculate interval begin.
-def get_interval_begin(num):
-    
-    interval_begin = None;
-    if (float(num).is_integer()):
-        interval_begin = num;
-    else:
-        interval_begin = chop_float(num, 5);
-    
-    return interval_begin;
-
-
-# Calculate interval end.
-def get_interval_end(num):
-    
-    interval_end = None;
-    if (float(num).is_integer()):
-        interval_end = num + 1;
-    else:
-        interval_end = chop_float(num, 5) + 0.01;
-    
-    return interval_end;
-
-
-#
-def get_feature_intervals_df(attr, project_summaries_df):
-    
-    df = pandas.DataFrame();
-
-    COLUMN_LABELS = ['>=', '<'];
-
-    global iwidths_dict;
-    global icounts_dict;
-    if (attr in iwidths_dict):
-
-        print("Attribute \'" + attr + "\' found");
-
-        iwidth = int(iwidths_dict[attr]);
-
-        values = project_summaries_df[attr].tolist();
-
-        max_val = max(values);
-
-        num_intervals = int(max_val / iwidth) + 1;
-
-        row_labels = [i for i in range(0, num_intervals+1)];
-        df = pandas.DataFrame(index=row_labels, columns=COLUMN_LABELS);
-        df.fillna(0.0);
-        
-        df.iloc[0]['>='] = 0;
-        df.iloc[0]['<'] = 1;
-        for i in range(0, num_intervals):
-
-            s = i * iwidth;
-            df.iloc[i+1]['>='] = s + 1;
-            df.iloc[i+1]['<'] = s + iwidth + 1;
-
-
-    elif (attr in icounts_dict):
-
-        print("Attribute \'" + attr + "\' found");
-
-        icount = int(icounts_dict[attr]);
-
-        values = project_summaries_df[attr].tolist();
-
-        max_val = max(values);
-
-        num_intervals = icount + 1;
-
-        iwidth = (max_val / icount) + 1;
-
-        row_labels = [i for i in range(0, num_intervals+1)];
-        df = pandas.DataFrame(index=row_labels, columns=COLUMN_LABELS);
-        df.fillna(0.0);
-        
-        df.iloc[0]['>='] = 0;
-        df.iloc[0]['<'] = 1;
-        for i in range(0, num_intervals):
-
-            s = i * iwidth;
-            df.iloc[i+1]['>='] = s + 1;
-            df.iloc[i+1]['<'] = s + iwidth + 1;
-
-
-    else:
-        
-        num_projects = project_summaries_df.shape[0];
-        
-        row_labels = [i for i in range(0, num_projects)];
-    
-        df = pandas.DataFrame(index=row_labels, columns=COLUMN_LABELS);
-        df.fillna(0.0);
-        
-        for i in range(0, num_projects): # For each project summary...
-            
-            project_summaries_row = project_summaries_df.iloc[i]; # Get project summary record (row).
-            attr_value = project_summaries_row[attr]; # Get project attribute value.
-            
-            df.iloc[i]['>='] = get_interval_begin(attr_value);
-            df.iloc[i]['<'] = get_interval_end(attr_value); # Calculate interval end.
-    
-    interval_df = df[['>=','<']];
-    interval_df = interval_df.drop_duplicates().reset_index(drop=True); # Eliminate duplicates.
-
-    return interval_df;
 
 
 # Get frequency distribution DataFrame for a group of project summaries for some feature.
@@ -767,11 +816,13 @@ def main():
             process_distribution_figs(attr, project_summaries_df);
             
             project_attr_frequency_dist_df = get_feature_freq_dist_df(attr, project_summaries_df);
+            get_cdf(attr, project_attr_frequency_dist_df);
+            #get_cdf(feature, feature_freq_dist_df);
             
             pathname, file_ext = os.path.splitext(args.data_store);
             dir_name = args.directory if args.directory else os.path.dirname(pathname);
             filename = os.path.basename(pathname);
-            xlsfile = dir_name + '/' + attr + '-' + filename + '.xlsx';
+            xlsfile = dir_name + '/' + filename + '-' + attr + '.xlsx';
             sh.write_df_to_file(project_attr_frequency_dist_df, attr, xlsfile);
             xlsfiles.append(xlsfile);
         print("Done.");
