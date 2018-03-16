@@ -310,9 +310,9 @@ def get_commit_attributes_activity(commit_attribute, project_ids_df, ds_df):
                                              ('repo_owner', '@repo_owner'),
                                              ('repo_name', '@repo_name'),
                                              ('path_in_repo', '@path_in_repo'),
+                                             ('date', '@committer_date'),
                                              (commit_attribute, '@'+commit_attribute)
                                              ]);#,
-                                             #('date', '@committer_date'),
                                              #('num_lines_changed', '@num_lines_changed'),
                                              #('num_lines_inserted', '@num_lines_inserted'),
                                              #('num_lines_deleted', '@num_lines_deleted'),
