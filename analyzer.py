@@ -42,6 +42,9 @@ font_size = "12pt"; # Font size for text in output graphs.
 
 dfs = list();
 
+xlsx_sheet_num = 2;
+xlsx_page_index_lookup = list();
+
 dtdeltas = list();
 
 # Process script arguments.
@@ -456,7 +459,16 @@ def get_project_summaries_df(features, project_ids_df, ds_df):
 
                 num_dtdeltas = get_num_dtdeltas(epochs, dtdelta_code);
                 dtdelta_label = DTDELTA_LABELS[dtdelta_code];
-                project_summaries_df.iloc[i][dtdelta_label] = num_dtdeltas; 
+                project_summaries_df.iloc[i][dtdelta_label] = num_dtdeltas;
+
+    global xlsx_sheet_num;
+    global xlsx_page_index_lookup;
+    sheet_name = '{:09d}'.format(xlsx_sheet_num);
+    label = 'project_activity_summaries';
+    xlsx_page_index_lookup.append((label, sheet_name));
+    xlsx_sheet_num = xlsx_sheet_num + 1;
+
+    dfs.append((project_summaries_df, sheet_name, False));
         
     return project_summaries_df;
 
@@ -732,12 +744,14 @@ def get_freq_dist_df(feature, project_summaries_df, feature_intervals_df):
     df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
     df = df.fillna(0.0);
     
+    drop_these = list();
     for i in range(0, num_intervals): # For each interval...
         
         feature_interval = feature_intervals_df.iloc[i];
         df.iloc[i]['>='] = feature_interval['>='];
         df.iloc[i]['<'] = feature_interval['<'];
         
+        include_row = False;
         for j in range(0, num_projects): # For each project summary...
             
             project_summary = project_summaries_df.iloc[j];
@@ -760,7 +774,25 @@ def get_freq_dist_df(feature, project_summaries_df, feature_intervals_df):
                 
                 cumulative_frequency = df.iloc[i]['cumulative_frequency'];
                 df.iloc[i]['cumulative_percentage'] = (float(cumulative_frequency) / float(num_projects)) * 100.0;
+
+                include_row = True;
+            
+        if (not include_row):
+            drop_these.append(i);
     
+    df = df.drop(drop_these); # Drop DataFrame rows (given indices specifed).
+    df = df.reset_index(drop=True); # Reset DataFrame row indices.
+        
+    global xlsx_sheet_num;
+    global xlsx_page_index_lookup;
+    sheet_name = '{:09d}'.format(xlsx_sheet_num);
+    label = feature + '_freq_distributions';
+    xlsx_page_index_lookup.append((label, sheet_name));
+    xlsx_sheet_num = xlsx_sheet_num + 1;
+
+    writable_df = df.drop(feature, axis=1);
+    dfs.append((writable_df, sheet_name, False));
+        
     return df;
 
 
@@ -953,6 +985,8 @@ def main():
             get_commit_attributes_activity(commit_attribute, project_ids_df, ds_df);
 
         global dfs;
+        global xlsx_sheet_num;
+        global xlsx_page_index_lookup;
         for i in range(0, num_features):
             
             feature = FEATURES[i];
@@ -964,8 +998,17 @@ def main():
             get_histogram(feature, feature_freq_dist_df);
             get_cdf(feature, feature_freq_dist_df);
 
-            dfs.append((feature_freq_dist_df, 'repos_' + feature, False));
-            
+            sheet_name = '{:09d}'.format(xlsx_sheet_num);
+            label = 'per_project_' + feature + '_intervals';
+            xlsx_page_index_lookup.append((label, sheet_name));
+            xlsx_sheet_num = xlsx_sheet_num + 1;
+
+            dfs.append((feature_freq_dist_df, sheet_name, False));
+        
+        df = pandas.DataFrame(xlsx_page_index_lookup, columns=['label', 'sheet']);
+        #df['sheet'] = df['sheet'].apply(lambda s: '= \'{0}\''.format(s));
+        #df['sheet'] = df['sheet'].apply(lambda s: s.replace('\'', ''));
+        dfs = [(df, 'index', False)] + dfs;
         pathstr, file_ext = os.path.splitext(args.data_store);
         dir_name = args.directory if args.directory else os.path.dirname(pathstr);
         filename = os.path.basename(pathstr);
