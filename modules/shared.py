@@ -518,17 +518,23 @@ def get_repo_urls(sources_str):
                 
 
 # Write DataFrame to file.
-def write_df_to_file(df, title, destination):
+def write_dfs_to_file(dfs, destination):
     
     df_writer = pandas.ExcelWriter(destination, engine='xlsxwriter');
-    df.to_excel(df_writer, title, index=False);
+
+    num_dfs = len(dfs);
+    for i in range(0, num_dfs):
+
+        (df, sheet_name, index) = dfs[i];
+        df.to_excel(df_writer, sheet_name, index=index);
+    
     df_writer.save();
 
 
 # Get data store DataFrame.
 def load_commits_data_store(data_store):
     
-    COLUMN_LABELS = ['github_hostname', 'repo_owner', 'repo_name',
+    COLUMN_LABELS = ['repo_remote_hostname', 'repo_owner', 'repo_name',
                      'path_in_repo',
                      'labels',
                      'commit_hash',

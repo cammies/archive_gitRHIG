@@ -23,7 +23,7 @@ ds_df = None; # Data store DataFrame.
 
 path_to_repo = ''; # Local environment path to repository.
 
-github_hostname = ''; # Identifier for GitHub service.
+repo_remote_hostname = ''; # Identifier for GitHub service.
 repo_owner = ''; # Identifier for repository owner.
 repo_name = ''; # Identifier for repository name.
 path_in_repo = ''; # Path in repository commit log refers to.
@@ -109,12 +109,12 @@ def get_repo_id(remote_origin_url):
     
     url = re.findall(r'^.+[://|@].+[:|/].+/.+', remote_origin_url);
 
-    (github_hostname, repo_owner, repo_name) = re.findall(r'^.+[://|@](.+)[:|/](.+)/(.+)', url[0])[0];
+    (repo_remote_hostname, repo_owner, repo_name) = re.findall(r'^.+[://|@](.+)[:|/](.+)/(.+)', url[0])[0];
     
     if (repo_name.endswith('.git')):
         repo_name = repo_name[:-4]; # Remove the '.git' from repo name.
 
-    return github_hostname, repo_owner, repo_name;
+    return repo_remote_hostname, repo_owner, repo_name;
 
 
 # Parse information on files affected in a single commit.
@@ -228,7 +228,7 @@ def get_gitlog_str():
 # Inspired by a blog post by Steven Kryskalla: http://blog.lost-theory.org/post/how-to-parse-git-log-output/
 def get_commits_df():
 
-    global github_hostname;
+    global repo_remote_hostname;
     global repo_owner;
     global repo_name;
     global path_in_repo;
@@ -256,7 +256,7 @@ def get_commits_df():
         
         ROW_LABELS = [r for r in range(0, num_commits)];
         
-        COLUMN_LABELS = ['github_hostname', 'repo_owner', 'repo_name',
+        COLUMN_LABELS = ['repo_remote_hostname', 'repo_owner', 'repo_name',
                          'path_in_repo',
                          'labels',
                          'commit_hash',
@@ -311,7 +311,7 @@ def get_commits_df():
         
             row = commits_df.iloc[i];
 
-            row['github_hostname'] = github_hostname;
+            row['repo_remote_hostname'] = repo_remote_hostname;
             row['repo_owner'] = repo_owner;
             row['repo_name'] = repo_name;
             row['path_in_repo'] = path_in_repo;
@@ -362,7 +362,8 @@ def push_commit_records(commits_df, title, destination):
     else:
         ds_df = commits_df;
 
-    sh.write_df_to_file(ds_df, title, destination);
+
+    sh.write_dfs_to_file([(ds_df, title, False)], destination);
     
     return;
 
@@ -400,7 +401,7 @@ def main():
     
     global args;
     global path_to_repo;
-    global github_hostname;
+    global repo_remote_hostname;
     global repo_owner;
     global repo_name;
     global path_in_repo;
@@ -428,9 +429,9 @@ def main():
         path_to_repo = os.path.abspath(path_to_repo);
         
         remote_origin_url = sh.get_remote_origin_url(path_to_repo);
-        github_hostname, repo_owner, repo_name = get_repo_id(remote_origin_url);
+        repo_remote_hostname, repo_owner, repo_name = get_repo_id(remote_origin_url);
         if (args.anonymize):
-            github_hostname = sh.get_hash_str(github_hostname);
+            repo_remote_hostname = sh.get_hash_str(repo_remote_hostname);
             repo_owner = sh.get_hash_str(repo_owner);
             repo_name = sh.get_hash_str(repo_name);
 

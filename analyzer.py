@@ -40,6 +40,8 @@ xlsfiles = list(); # Keep track of output XLS filenames.
 
 font_size = "12pt"; # Font size for text in output graphs.
 
+dfs = list();
+
 dtdeltas = list();
 
 # Process script arguments.
@@ -182,7 +184,7 @@ def prune_records(ds_df):
 # Determine project (calculated) IDs from data store.
 def get_project_ids_df(ds_df):
 
-    project_ids_df = ds_df[['github_hostname', 'repo_owner', 'repo_name', 'path_in_repo']];
+    project_ids_df = ds_df[['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo']];
     project_ids_df = project_ids_df.drop_duplicates(); # Eliminate duplicate DataFrame rows.
     project_ids_df = project_ids_df.reset_index(drop=True); # Reset DataFrame row indices.
     
@@ -219,7 +221,7 @@ def get_commit_patterns(project_ids_df, ds_df):
 
     ds_df['committer_date'] = committer_dates; # Add new column for committer dates as strings.
     
-    hover = bokeh.models.HoverTool(tooltips=[('github_hostname', '@github_hostname'),
+    hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
                                              ('repo_owner', '@repo_owner'),
                                              ('repo_name', '@repo_name'),
                                              ('path_in_repo', '@path_in_repo'),
@@ -306,7 +308,7 @@ def get_commit_attributes_activity(commit_attribute, project_ids_df, ds_df):
 
     #ds_df['committer_date'] = committer_dates; # Add new column for committer dates as strings.
     
-    hover = bokeh.models.HoverTool(tooltips=[('github_hostname', '@github_hostname'),
+    hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
                                              ('repo_owner', '@repo_owner'),
                                              ('repo_name', '@repo_name'),
                                              ('path_in_repo', '@path_in_repo'),
@@ -342,7 +344,7 @@ def get_commit_attributes_activity(commit_attribute, project_ids_df, ds_df):
 
     for j in range(0, num_projects): # For each project...
 
-        df = ds_df[(ds_df['github_hostname'] == project_ids_df.iloc[j]['github_hostname']) &
+        df = ds_df[(ds_df['repo_remote_hostname'] == project_ids_df.iloc[j]['repo_remote_hostname']) &
                    (ds_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
                    (ds_df['repo_name'] == project_ids_df.iloc[j]['repo_name']) &
                    (ds_df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo'])];
@@ -396,7 +398,7 @@ def get_num_dtdeltas(epochs, dtdelta_code):
 # Get datetime delta metrics and project feature vector.
 def get_project_summaries_df(features, project_ids_df, ds_df):
     
-    project_id_labels = ['github_hostname',
+    project_id_labels = ['repo_remote_hostname',
                          'repo_owner',
                          'repo_name',
                          'path_in_repo'];
@@ -425,7 +427,7 @@ def get_project_summaries_df(features, project_ids_df, ds_df):
             
             commit_record = ds_df.iloc[j]; # Get commit record.
 
-            if (commit_record['github_hostname'] == project_id['github_hostname'] and
+            if (commit_record['repo_remote_hostname'] == project_id['repo_remote_hostname'] and
                 commit_record['repo_owner'] == project_id['repo_owner'] and
                 commit_record['repo_name'] == project_id['repo_name'] and
                 commit_record['path_in_repo'] == project_id['path_in_repo']): # If commit record project ID matches project ID...
@@ -439,7 +441,7 @@ def get_project_summaries_df(features, project_ids_df, ds_df):
                 num_lines_deleted = num_lines_deleted + commit_record['num_lines_deleted'];
                 num_lines_modified = num_lines_modified + commit_record['num_lines_modified'];
 
-            project_summaries_df.iloc[i]['github_hostname'] = project_id['github_hostname'];
+            project_summaries_df.iloc[i]['repo_remote_hostname'] = project_id['repo_remote_hostname'];
             project_summaries_df.iloc[i]['repo_owner'] = project_id['repo_owner'];
             project_summaries_df.iloc[i]['repo_name'] = project_id['repo_name'];
             project_summaries_df.iloc[i]['path_in_repo'] = project_id['path_in_repo'];
@@ -525,7 +527,7 @@ def get_histogram(feature, feature_freq_dist_df):
 
     feature_freq_dist_df['bottom'] = [0 for b in range(0, num_projects)];
     
-    hover = bokeh.models.HoverTool(tooltips=[('github_hostname', '@github_hostname'),
+    hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
                                              ('repo_owner', '@repo_owner'),
                                              ('repo_name', '@repo_name'),
                                              ('path_in_repo', '@path_in_repo'),
@@ -772,7 +774,7 @@ def get_feature_freq_dist_df(feature, project_summaries_df):
     
     ROW_LABELS = [r for r in range(0, num_projects)];
     
-    COLUMN_LABELS = ['github_hostname',
+    COLUMN_LABELS = ['repo_remote_hostname',
                      'repo_owner',
                      'repo_name',
                      'path_in_repo',
@@ -805,7 +807,7 @@ def get_feature_freq_dist_df(feature, project_summaries_df):
             if (float(feature_value) >= float(freq_dist['>=']) and
                 float(feature_value) < float(freq_dist['<'])):
                 
-                df.iloc[i]['github_hostname'] = project_summary['github_hostname'];
+                df.iloc[i]['repo_remote_hostname'] = project_summary['repo_remote_hostname'];
                 df.iloc[i]['repo_owner'] = project_summary['repo_owner'];
                 df.iloc[i]['repo_name'] = project_summary['repo_name'];
                 df.iloc[i]['path_in_repo'] = project_summary['path_in_repo'];
@@ -853,7 +855,7 @@ def get_cdf(feature, feature_freq_dist_df):
 
     feature_freq_dist_df['cumulative_probability'] = cumulative_probabilities; # Add new column for CDF data as strings.
     
-    hover = bokeh.models.HoverTool(tooltips=[('github_hostname', '@github_hostname'),
+    hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
                                              ('repo_owner', '@repo_owner'),
                                              ('repo_name', '@repo_name'),
                                              ('path_in_repo', '@path_in_repo'),
@@ -949,7 +951,8 @@ def main():
 
             commit_attribute = commit_attributes[i];
             get_commit_attributes_activity(commit_attribute, project_ids_df, ds_df);
-        
+
+        global dfs;
         for i in range(0, num_features):
             
             feature = FEATURES[i];
@@ -960,19 +963,22 @@ def main():
 
             get_histogram(feature, feature_freq_dist_df);
             get_cdf(feature, feature_freq_dist_df);
+
+            dfs.append((feature_freq_dist_df, 'repos_' + feature, False));
             
-            pathstr, file_ext = os.path.splitext(args.data_store);
-            dir_name = args.directory if args.directory else os.path.dirname(pathstr);
-            filename = os.path.basename(pathstr);
-            xlsfile = dir_name + '/' + filename + '-' + feature + '.xlsx';
-            sh.write_df_to_file(feature_freq_dist_df, feature, xlsfile);
-            xlsfiles.append(xlsfile);
+        pathstr, file_ext = os.path.splitext(args.data_store);
+        dir_name = args.directory if args.directory else os.path.dirname(pathstr);
+        filename = os.path.basename(pathstr);
+        xlsfile = dir_name + '/' + filename + 'asdf' + '.xlsx';
+        sh.write_dfs_to_file(dfs, xlsfile);
+        #xlsfiles.append(xlsfile);
+
         print("Done.");
         print('');
 
-        print("SPREADSHEET_PATHS:");
-        for xlsfile in xlsfiles:
-            print("-> " + xlsfile);
+        print("SPREADSHEET_PATH:");
+        #for xlsfile in xlsfiles:
+        print("-> " + xlsfile);
         print('');
 
         bokeh.io.save(bokeh.layouts.column(figs_list));
