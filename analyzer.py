@@ -39,7 +39,7 @@ xlsfiles = list(); # Keep track of output XLS filenames.
 
 font_size = "12pt"; # Font size for text in output graphs.
 
-dt_deltas = list();
+dtdeltas = list();
 
 # Process script arguments.
 def process_args():
@@ -59,20 +59,20 @@ def process_args():
 
 
 # Dict of each datetime delta and its corresponding named unit.
-DTD_NAMES = {'Y' : 'total_num_years_active',
-             'm' : 'total_num_months_active',
-             'd' : 'total_num_days_active',
-             'H' : 'total_num_hours_active',
-             'M' : 'total_num_minutes_active',
-             'S' : 'total_num_seconds_active'};
+DTDELTA_LABELS = {'Y' : 'total_num_years_active',
+                  'm' : 'total_num_months_active',
+                  'd' : 'total_num_days_active',
+                  'H' : 'total_num_hours_active',
+                  'M' : 'total_num_minutes_active',
+                  'S' : 'total_num_seconds_active'};
 
 # List of recognized datetime delta units.
-DTD_CODES = ['Y', # 'year'
-             'm', # 'month'
-             'd', # 'day'
-             'H', # 'hour'
-             'M', # 'minute'
-             'S']; # 'second'
+DTDELTA_CODES = ['Y', # 'year'
+                 'm', # 'month'
+                 'd', # 'day'
+                 'H', # 'hour'
+                 'M', # 'minute'
+                 'S']; # 'second'
 
 
 def check_args():
@@ -138,42 +138,42 @@ def echo_args():
 
 
 #
-def get_dated_labelled_rows(ds_df):
+def prune_records(ds_df):
 
     since = float(sh.utc_str_to_epoch(args.since));
     until = float(sh.utc_str_to_epoch(args.until));
 
-    drop_these = list();
-    for i in range(0, ds_df.shape[0]): # For each project commit record (row) in data store DataFrame...
+    init_num_records = ds_df.shape[0];
+
+    drop_these = list(); # List of indices of corresponding DataFrame rows to drop.
+    for i in range(0, init_num_records): # For each project commit record (row) in data store DataFrame...
         
-        ds_df_row = ds_df.iloc[i];
+        commit_record = ds_df.iloc[i];
         
-        ds_df_author_date = float(ds_df_row['author_epoch']);
-        ds_df_committer_date = float(ds_df_row['committer_epoch']);
+        author_date = float(commit_record['author_epoch']);
+        committer_date = float(commit_record['committer_epoch']);
         
-        if (ds_df_author_date < since or
-            ds_df_author_date > until or
-            ds_df_committer_date < since or
-            ds_df_committer_date > until):
+        if (author_date < since or
+            author_date > until or
+            committer_date < since or
+            committer_date > until):
 
             drop_these.append(i);
         
         elif (args.labels):
             
-            record_labels_tuple = ast.literal_eval(ds_df_row['labels']);
-            include_row = False;
-            for label in args.labels:
-                if (label in record_labels_tuple):
-                    include_row = True;
-                else:
-                    pass;
+            commit_record_labels_tuple = ast.literal_eval(commit_record['labels']);
+            include_commit_record = False;
+            for label in args.labels: # For EACH user-supplied label...
+                
+                if (label in commit_record_labels_tuple): # If commit record includes label... 
+                    include_commit_record = True; # Indicate to include this commit record in resulting DataFrame.
             
-            if (include_row):
-                pass;
-            else:
+            if (not include_commit_record):
                 drop_these.append(i);
 
-    df = ds_df.drop(drop_these);
+    df = ds_df.drop(drop_these); # Drop DataFrame rows (given indices specifed).
+    df = df.reset_index(drop=True); # Reset DataFrame row indices.
         
     return df;
 
@@ -181,72 +181,11 @@ def get_dated_labelled_rows(ds_df):
 # Determine project (calculated) IDs from data store.
 def get_project_ids_df(ds_df):
 
-    project_ids_df = ds_df[['github_hostname', 'repo_owner', 'repo_name', 'path_in_repo']];#, 'path_in_repo']];#, 'path_to_repo']];
-    project_ids_df = project_ids_df.drop_duplicates().reset_index(drop=True);
+    project_ids_df = ds_df[['github_hostname', 'repo_owner', 'repo_name', 'path_in_repo']];
+    project_ids_df = project_ids_df.drop_duplicates(); # Eliminate duplicate DataFrame rows.
+    project_ids_df = project_ids_df.reset_index(drop=True); # Reset DataFrame row indices.
     
     return project_ids_df;
-
-
-# Plot CDF for some feature.
-def process_new_cdf(feature, feature_freq_dist_df, p):
-        
-    data = dict(feature_freq_dist_df);
-    
-    source = bokeh.plotting.ColumnDataSource(data=data);
-    
-    p.circle(feature, 'cumulative_probability', source=source, line_color='red', fill_color='red');
-    p.line(feature, 'cumulative_probability', source=source, line_color='red');
-    
-    return p;
-
-
-# Get plot containing development timeline for each repository.
-def get_cdf(feature, feature_freq_dist_df):
-    
-    global figs_list;
-    
-    num_projects = feature_freq_dist_df.shape[0];
-    
-    cumulative_probabilities = list();
-    for i, row in feature_freq_dist_df.iterrows(): # Format committer dates.
-
-        cumulative_percentage = float(row['cumulative_percentage']);
-        
-        cumulative_probability = cumulative_percentage / 100.0;
-
-        cumulative_probabilities.append(cumulative_probability);
-
-    feature_freq_dist_df['cumulative_probability'] = cumulative_probabilities; # Add new column for CDF data as strings.
-    
-    hover = bokeh.models.HoverTool(tooltips=[('github_hostname', '@github_hostname'),
-                                             ('repo_owner', '@repo_owner'),
-                                             ('repo_name', '@repo_name'),
-                                             ('path_in_repo', '@path_in_repo'),
-                                             (feature, '@'+feature)]);
-    
-    title = "Cumulative Distribution Function (N=" + str(num_projects) + ")";
-    
-    feature_title = feature_titles_dict[feature];
-
-    p = bokeh.plotting.figure(#plot_width=400,
-                              #plot_height=400,
-                              tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save, ''reset'],
-                              title=title,
-                              x_axis_label=feature_title,
-                              y_axis_label='Probability',
-                              y_range=bokeh.models.Range1d(0, 1, bounds='auto')
-                              );
-    
-    p.title.align='center';
-    p.title.text_font_size=font_size;
-    p.xaxis.major_label_text_font_size=font_size;
-    p.xaxis.axis_label_text_font_size=font_size;
-    p.yaxis.major_label_text_font_size=font_size;
-    p.yaxis.axis_label_text_font_size=font_size;
-
-    p = process_new_cdf(feature, feature_freq_dist_df, p);
-
-    figs_list.append(p);
 
 
 # Plot repository timelines for some data set.
@@ -263,7 +202,7 @@ def process_timelines(df, p):
 
 
 # Get plot containing development timeline for each repository.
-def get_project_timelines(project_ids_df, ds_df):
+def get_commit_patterns(project_ids_df, ds_df):
     
     global figs_list;
     
@@ -320,19 +259,19 @@ def get_project_timelines(project_ids_df, ds_df):
 
 
 # Get datetime delta strftime-like string corresponding to datetime delta code.
-def get_dtd_str(dt, dtd_code):
+def get_dtdelta_str(dt, dtdelta_code):
    
-    if (dtd_code == 'Y'):
+    if (dtdelta_code == 'Y'):
         return dt.strftime('%Y');
-    elif (dtd_code == 'm'):
+    elif (dtdelta_code == 'm'):
         return dt.strftime('%Y-%m');
-    elif (dtd_code == 'd'):
+    elif (dtdelta_code == 'd'):
         return dt.strftime('%Y-%m-%d');
-    elif (dtd_code == 'H'):
+    elif (dtdelta_code == 'H'):
         return dt.strftime('%Y-%m-%d %H:00:00');
-    elif (dtd_code == 'M'):
+    elif (dtdelta_code == 'M'):
         return dt.strftime('%Y-%m-%d %H:%M:00');
-    elif (dtd_code == 'S'):
+    elif (dtdelta_code == 'S'):
         return dt.strftime('%Y-%m-%d %H:%M:%S');
 
 
@@ -342,105 +281,87 @@ def epoch_to_local_utc(epoch):
     return datetime.datetime.fromtimestamp(float(epoch));
 
 
-#
-def get_num_dtds(epochs, dtd_code):
+# Get number of datetime deltas given some list of epochs.
+def get_num_dtdeltas(epochs, dtdelta_code):
 
-    dtds = list();
+    dtdeltas = list();
     for epoch in epochs:
 
         dt = epoch_to_local_utc(epoch);
-        dtd_str = get_dtd_str(dt, dtd_code);
-        dtds.append(dtd_str);
+        dtdelta_str = get_dtdelta_str(dt, dtdelta_code);
+        dtdeltas.append(dtdelta_str);
 
-    dtds = list(set(dtds));
+    dtdeltas = list(set(dtdeltas));
 
-    num_dtds = len(dtds);
+    num_dtdeltas = len(dtdeltas);
 
-    return num_dtds;
+    return num_dtdeltas;
 
 
 # Get datetime delta metrics and project feature vector.
-def get_project_summaries_df(commit_info_df, project_ids_df, attributes):
+def get_project_summaries_df(features, project_ids_df, ds_df):
     
-    COLUMN_LABELS = ['github_hostname',
-                     'repo_owner',
-                     'repo_name',
-                     'path_in_repo'];
+    project_id_labels = ['github_hostname',
+                         'repo_owner',
+                         'repo_name',
+                         'path_in_repo'];
 
-    column_labels = COLUMN_LABELS + attributes;
+    COLUMN_LABELS = project_id_labels + features;
     
-    summary_dfs = list();
-    for i in range(0, project_ids_df.shape[0]): # For each project ID...
+    num_projects = project_ids_df.shape[0];
+    
+    ROW_LABELS = [r for r in range(0, num_projects)];
+    
+    project_summaries_df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
+    
+    num_commits_record = ds_df.shape[0];
+    
+    for i in range(0, num_projects): # For each project (from ID)...
         
-        project_id_row = project_ids_df.iloc[i]; # Get row for project ID.
-        
-        summary_df = pandas.DataFrame(index=[0], columns=column_labels);
+        project_id = project_ids_df.iloc[i]; # Get project ID.
         
         commit_hashes = list();
-        #filenames = list();
-        #num_files_changed = 0;
         epochs = list();
         num_lines_changed = 0;
         num_lines_inserted = 0;
         num_lines_deleted = 0;
         num_lines_modified = 0;
-        for j in range(0, commit_info_df.shape[0]): # For each project commit record (row) in data store DataFrame...
+        for j in range(0, num_commits_record): # For each commit record (row) in data store DataFrame...
             
-            cf_df_row = commit_info_df.iloc[j];
-            
-            record_labels_tuple = ast.literal_eval(cf_df_row['labels']);
-            matches_labels = True;
-            if (args.labels):
-                for label in args.labels:
-                    if (label not in record_labels_tuple):
-                        matches_labels = False;
-            
-            if (matches_labels and
-                cf_df_row['github_hostname'] == project_id_row['github_hostname'] and
-                cf_df_row['repo_owner'] == project_id_row['repo_owner'] and
-                cf_df_row['repo_owner'] == project_id_row['repo_owner'] and
-                cf_df_row['path_in_repo'] == project_id_row['path_in_repo']): # If project ID matches current project ID...
-                
-                commit_hashes.append(cf_df_row['commit_hash']);
-                
-                #filenames.append(cf_df_row['filename']);
+            commit_record = ds_df.iloc[j]; # Get commit record.
 
-                epochs = epochs + [cf_df_row['author_epoch'], cf_df_row['committer_epoch']];
-                
-                #filenames_tuple = ast.literal_eval(ds_df_row['filenames']);
-                #filenames = filenames + filenames_tuple;
-                
-                num_lines_changed = num_lines_changed + cf_df_row['num_lines_changed'];
-                num_lines_inserted = num_lines_inserted + cf_df_row['num_lines_inserted'];
-                num_lines_deleted = num_lines_deleted + cf_df_row['num_lines_deleted'];
-                num_lines_modified = num_lines_modified + cf_df_row['num_lines_modified'];
+            if (commit_record['github_hostname'] == project_id['github_hostname'] and
+                commit_record['repo_owner'] == project_id['repo_owner'] and
+                commit_record['repo_name'] == project_id['repo_name'] and
+                commit_record['path_in_repo'] == project_id['path_in_repo']): # If commit record project ID matches project ID...
+            
+                commit_hashes.append(commit_record['commit_hash']);
+                 
+                epochs = epochs + [commit_record['author_epoch'], commit_record['committer_epoch']];
+                    
+                num_lines_changed = num_lines_changed + commit_record['num_lines_changed'];
+                num_lines_inserted = num_lines_inserted + commit_record['num_lines_inserted'];
+                num_lines_deleted = num_lines_deleted + commit_record['num_lines_deleted'];
+                num_lines_modified = num_lines_modified + commit_record['num_lines_modified'];
 
-        summary_df.iloc[0]['github_hostname'] = project_id_row['github_hostname'];
-        summary_df.iloc[0]['repo_owner'] = project_id_row['repo_owner'];
-        summary_df.iloc[0]['repo_name'] = project_id_row['repo_name'];
-        summary_df.iloc[0]['path_in_repo'] = project_id_row['path_in_repo'];
-        summary_df.iloc[0]['total_num_commits'] = len(list(set(commit_hashes)));
-        #summary_df.iloc[0]['total_num_files_changed'] = len(list(set(filenames)));
-        summary_df.iloc[0]['total_num_lines_changed'] = num_lines_changed;
-        summary_df.iloc[0]['total_num_lines_inserted'] = num_lines_inserted;
-        summary_df.iloc[0]['total_num_lines_deleted'] = num_lines_deleted;
-        summary_df.iloc[0]['total_num_lines_modified'] = num_lines_modified;
+            project_summaries_df.iloc[i]['github_hostname'] = project_id['github_hostname'];
+            project_summaries_df.iloc[i]['repo_owner'] = project_id['repo_owner'];
+            project_summaries_df.iloc[i]['repo_name'] = project_id['repo_name'];
+            project_summaries_df.iloc[i]['path_in_repo'] = project_id['path_in_repo'];
+            project_summaries_df.iloc[i]['total_num_commits'] = len(list(set(commit_hashes)));
+            project_summaries_df.iloc[i]['total_num_lines_changed'] = num_lines_changed;
+            project_summaries_df.iloc[i]['total_num_lines_inserted'] = num_lines_inserted;
+            project_summaries_df.iloc[i]['total_num_lines_deleted'] = num_lines_deleted;
+            project_summaries_df.iloc[i]['total_num_lines_modified'] = num_lines_modified;
+            
+            global dtdeltas;
+            for dtdelta_code in dtdeltas:
+
+                num_dtdeltas = get_num_dtdeltas(epochs, dtdelta_code);
+                dtdelta_label = DTDELTA_LABELS[dtdelta_code];
+                project_summaries_df.iloc[i][dtdelta_label] = num_dtdeltas; 
         
-        epochs = list(set(epochs));
-
-        global dt_deltas;
-        for dtd_code in dt_deltas:
-
-            num_dtds = get_num_dtds(epochs, dtd_code);
-            dtd_name = DTD_NAMES[dtd_code];
-            summary_df.iloc[0][dtd_name] = num_dtds; 
-            summary_df.iloc[0][dtd_code] = num_dtds; 
-        
-        summary_dfs.append(summary_df);
-    
-    summaries_df = pandas.concat(summary_dfs).reset_index();
-    
-    return summaries_df;
+    return project_summaries_df;
 
 
 # Dict of commit attributes names in plain English.
@@ -466,7 +387,9 @@ def process_histogram(data, xlabel, ylabel):
     
     data_size = len(data);
     
-    hist, bin_edges = numpy.histogram(data, density=False);
+    num_bins = max(data);
+
+    hist, bin_edges = numpy.histogram(data, density=False, bins=num_bins);
     
     title = "Histogram (N=" + str(data_size) + ")";
     
@@ -482,6 +405,57 @@ def process_histogram(data, xlabel, ylabel):
     p.xaxis.axis_label_text_font_size=font_size;
     p.yaxis.major_label_text_font_size=font_size;
     p.yaxis.axis_label_text_font_size=font_size;
+
+    figs_list.append(p);
+
+
+#
+def process_new_histogram(feature_freq_dist_df, p):
+        
+    data = dict(feature_freq_dist_df);
+    
+    source = bokeh.plotting.ColumnDataSource(data=data);
+    
+    p.quad(top='frequency', bottom='bottom', left='>=', right='<', source=source, line_color='black', fill_color='blue');
+
+    return p;
+
+
+# Get plot containing development timeline for each repository.
+def get_histogram(feature, feature_freq_dist_df):
+    
+    global figs_list;
+    
+    num_projects = feature_freq_dist_df.shape[0];
+
+    feature_freq_dist_df['bottom'] = [0 for b in range(0, num_projects)];
+    
+    hover = bokeh.models.HoverTool(tooltips=[('github_hostname', '@github_hostname'),
+                                             ('repo_owner', '@repo_owner'),
+                                             ('repo_name', '@repo_name'),
+                                             ('path_in_repo', '@path_in_repo'),
+                                             (feature, '@'+feature)]);
+    
+    title = "Histogram (N=" + str(num_projects) + ")";
+    
+    feature_title = feature_titles_dict[feature];
+
+    p = bokeh.plotting.figure(#plot_width=400,
+                              #plot_height=400,
+                              tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save, ''reset'],
+                              title=title,
+                              x_axis_label=feature_title,
+                              y_axis_label='Number of Repositories',
+                              );
+    
+    p.title.align='center';
+    p.title.text_font_size=font_size;
+    p.xaxis.major_label_text_font_size=font_size;
+    p.xaxis.axis_label_text_font_size=font_size;
+    p.yaxis.major_label_text_font_size=font_size;
+    p.yaxis.axis_label_text_font_size=font_size;
+
+    p = process_new_histogram(feature_freq_dist_df, p);
 
     figs_list.append(p);
 
@@ -638,7 +612,8 @@ def get_feature_intervals_df(feature, project_summaries_df):
             df.iloc[i]['<'] = calc_interval_end(to_value);
     
     intervals_df = df[['>=','<']];
-    intervals_df = intervals_df.drop_duplicates().reset_index(drop=True); # Eliminate duplicates.
+    intervals_df = intervals_df.drop_duplicates(); # Eliminate duplicate DataFrame rows.
+    intervals_df = intervals_df.reset_index(drop=True); # Reset DataFrame row indices.
 
     return intervals_df;
 
@@ -646,8 +621,8 @@ def get_feature_intervals_df(feature, project_summaries_df):
 # Get preliminary frequency distribution DataFrame for a group of project summaries for some feature.
 def get_freq_dist_df(feature, project_summaries_df, feature_intervals_df):
     
-    feature_intervals_df = feature_intervals_df.sort_values(by=['>=']); # Sort by interval begin-value.
-    feature_intervals_df = feature_intervals_df.reset_index(drop=True); # Reset DataFrame index.
+    feature_intervals_df = feature_intervals_df.sort_values(by=['>=']); # Sort DataFrame rows by interval begin-value.
+    feature_intervals_df = feature_intervals_df.reset_index(drop=True); # Reset DataFrame row indices.
     
     num_projects = project_summaries_df.shape[0];
     
@@ -696,7 +671,7 @@ def get_freq_dist_df(feature, project_summaries_df, feature_intervals_df):
 def get_feature_freq_dist_df(feature, project_summaries_df):
     
     project_summaries_df = project_summaries_df.sort_values(by=[feature]); # Sort by values in feature observations.
-    project_summaries_df = project_summaries_df.reset_index(drop=True); # Reset DataFrame index.
+    project_summaries_df = project_summaries_df.reset_index(drop=True); # Reset DataFrame indice.
     
     num_projects = project_summaries_df.shape[0];
     
@@ -752,6 +727,68 @@ def get_feature_freq_dist_df(feature, project_summaries_df):
     return df;
 
 
+# Plot CDF for some feature.
+def process_new_cdf(feature, feature_freq_dist_df, p):
+        
+    data = dict(feature_freq_dist_df);
+    
+    source = bokeh.plotting.ColumnDataSource(data=data);
+    
+    p.circle(feature, 'cumulative_probability', source=source, line_color='red', fill_color='red');
+    p.line(feature, 'cumulative_probability', source=source, line_color='red');
+    
+    return p;
+
+
+# Get plot containing development timeline for each repository.
+def get_cdf(feature, feature_freq_dist_df):
+    
+    global figs_list;
+    
+    num_projects = feature_freq_dist_df.shape[0];
+    
+    cumulative_probabilities = list();
+    for i, row in feature_freq_dist_df.iterrows(): # Format committer dates.
+
+        cumulative_percentage = float(row['cumulative_percentage']);
+        
+        cumulative_probability = cumulative_percentage / 100.0;
+
+        cumulative_probabilities.append(cumulative_probability);
+
+    feature_freq_dist_df['cumulative_probability'] = cumulative_probabilities; # Add new column for CDF data as strings.
+    
+    hover = bokeh.models.HoverTool(tooltips=[('github_hostname', '@github_hostname'),
+                                             ('repo_owner', '@repo_owner'),
+                                             ('repo_name', '@repo_name'),
+                                             ('path_in_repo', '@path_in_repo'),
+                                             (feature, '@'+feature)]);
+    
+    title = "Cumulative Distribution Function (N=" + str(num_projects) + ")";
+    
+    feature_title = feature_titles_dict[feature];
+
+    p = bokeh.plotting.figure(#plot_width=400,
+                              #plot_height=400,
+                              tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save, ''reset'],
+                              title=title,
+                              x_axis_label=feature_title,
+                              y_axis_label='Probability',
+                              y_range=bokeh.models.Range1d(0, 1, bounds='auto')
+                              );
+    
+    p.title.align='center';
+    p.title.text_font_size=font_size;
+    p.xaxis.major_label_text_font_size=font_size;
+    p.xaxis.axis_label_text_font_size=font_size;
+    p.yaxis.major_label_text_font_size=font_size;
+    p.yaxis.axis_label_text_font_size=font_size;
+
+    p = process_new_cdf(feature, feature_freq_dist_df, p);
+
+    figs_list.append(p);
+
+
 # Driver for analyzer.
 def main():
     
@@ -767,13 +804,13 @@ def main():
     print('');
     start = datetime.datetime.now();
 
-    ds_df = get_dated_labelled_rows(ds_df);
+    ds_df = prune_records(ds_df);
 
     if (not ds_df.empty):
         
-        pathname, file_ext = os.path.splitext(args.data_store);
-        dir_name = args.directory if args.directory else os.path.dirname(pathname);
-        filename = os.path.basename(pathname);
+        pathstr, file_ext = os.path.splitext(args.data_store);
+        dir_name = args.directory if args.directory else os.path.dirname(pathstr);
+        filename = os.path.basename(pathstr);
         htmlfile = dir_name + '/' + filename + '.html';
         bokeh.plotting.output_file(htmlfile, title="Project Statistics");
 
@@ -781,45 +818,50 @@ def main():
         project_ids_df = get_project_ids_df(ds_df);
         print("Done.");
         
-        attributes = ['total_num_commits',
-                      'total_num_lines_changed',
-                      'total_num_lines_inserted',
-                      'total_num_lines_deleted',
-                      'total_num_lines_modified'];
-        dtd_code_labels = list();
-        global dt_deltas;
-        dt_deltas = ['d'];
-        for dtd_code in dt_deltas:
+        features = ['total_num_commits',
+                    'total_num_lines_changed',
+                    'total_num_lines_inserted',
+                    'total_num_lines_deleted',
+                    'total_num_lines_modified'];
+        
+        dtdelta_labels = list();
+        global dtdeltas;
+        dtdeltas = ['d'];
+        for dtdelta_code in dtdeltas:
 
-            dtd_name = DTD_NAMES[dtd_code];
-            dtd_code_labels.append(dtd_name);
+            dtdelta_label = DTDELTA_LABELS[dtdelta_code];
+            dtdelta_labels.append(dtdelta_label);
 
-        attributes = attributes + dtd_code_labels;
+        FEATURES = features + dtdelta_labels;
 
         print("Building project summaries...");
-        project_summaries_df = get_project_summaries_df(ds_df, project_ids_df, attributes);
+        project_summaries_df = get_project_summaries_df(FEATURES, project_ids_df, ds_df);
         print("Done.");
         
         num_projects = project_summaries_df.shape[0];    
         
         print("Generating project statistics...");
 
-        get_project_timelines(project_ids_df, ds_df);
+        get_commit_patterns(project_ids_df, ds_df);
 
-        for a in range(0, len(attributes)):
-            attr = attributes[a];
+        num_features = len(FEATURES);
+
+        for i in range(0, num_features):
             
-            process_distribution_figs(attr, project_summaries_df);
+            feature = FEATURES[i];
             
-            project_attr_frequency_dist_df = get_feature_freq_dist_df(attr, project_summaries_df);
-            get_cdf(attr, project_attr_frequency_dist_df);
-            #get_cdf(feature, feature_freq_dist_df);
+            process_distribution_figs(feature, project_summaries_df);
             
-            pathname, file_ext = os.path.splitext(args.data_store);
-            dir_name = args.directory if args.directory else os.path.dirname(pathname);
-            filename = os.path.basename(pathname);
-            xlsfile = dir_name + '/' + filename + '-' + attr + '.xlsx';
-            sh.write_df_to_file(project_attr_frequency_dist_df, attr, xlsfile);
+            feature_freq_dist_df = get_feature_freq_dist_df(feature, project_summaries_df);
+
+            get_histogram(feature, feature_freq_dist_df);
+            get_cdf(feature, feature_freq_dist_df);
+            
+            pathstr, file_ext = os.path.splitext(args.data_store);
+            dir_name = args.directory if args.directory else os.path.dirname(pathstr);
+            filename = os.path.basename(pathstr);
+            xlsfile = dir_name + '/' + filename + '-' + feature + '.xlsx';
+            sh.write_df_to_file(feature_freq_dist_df, feature, xlsfile);
             xlsfiles.append(xlsfile);
         print("Done.");
         print('');
