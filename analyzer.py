@@ -6,11 +6,12 @@ import ast;
 import bokeh.io; # Interactive graphs in Jupyter Notebook.
 import bokeh.layouts; # Output HTML column layout.
 import bokeh.models; # Graph y-range, Hover Tool.
-import bokeh.palettes; # Graph color pallettes.
+import bokeh.palettes; # Graph color palettes.
 import bokeh.plotting; # Graph plot handling.
 import datetime;
 import io; # File writing.
 #import math;
+#import bokeh.palettes; # Graph color pallettes.
 import modules.shared as sh;
 import numpy; # CDF, histogram graphs.
 import os; # File, directory handling.
@@ -254,6 +255,100 @@ def get_commit_patterns(project_ids_df, ds_df):
         pindex = [j+1 for k in range(0, df.shape[0])];
         df = df.assign(project_index= pindex);
         p = process_timelines(df, p);
+
+    figs_list.append(p);
+
+
+# Dict of commit attributes names in plain English.
+commit_attribute_titles_dict = {#'total_num_commits' : 'Total Number of Commits',
+                                #'total_num_files_changed' : 'Total Number of Files Changed',
+                                'num_lines_changed' : 'Number of Lines Changed',
+                                'num_lines_inserted' : 'Number of Lines Inserted',
+                                'num_lines_deleted' : 'Number of Lines Deleted',
+                                'num_lines_modified' : 'Number of Lines Modified',
+                                'num_years_active' : 'Number of Years Active'#,
+                                #'total_num_months_active' : 'Total Number of Months Active',
+                                #'total_num_days_active' : 'Total Number of Days Active',
+                                #'total_num_hours_active' : 'Total Number of Hours Active',
+                                #'total_num_minutes_active' : 'Total Number of Minutes Active',
+                                #'total_num_seconds_active' : 'Total Number of Seconds Active'}
+                                }
+
+
+# Plot repository timelines for some data set.
+def process_commit_attributes_activity(commit_attribute, palette_index, df, p):
+        
+    data = dict(df);
+    
+    source = bokeh.plotting.ColumnDataSource(data=data);
+ 
+    p.circle('committer_epoch', commit_attribute, source=source, line_color=bokeh.palettes.Dark2_5[palette_index], fill_color=bokeh.palettes.Dark2_5[palette_index]);
+    p.line('committer_epoch', commit_attribute, source=source, line_color=bokeh.palettes.Dark2_5[palette_index]);
+    
+    return p;
+
+
+# Get plot containing development timeline for each repository.
+def get_commit_attributes_activity(commit_attribute, project_ids_df, ds_df):
+    
+    global figs_list;
+    
+    num_projects = project_ids_df.shape[0];
+    
+    #committer_dates = list();
+    #print ds_df
+    #for i, row in ds_df.iterrows(): # Format committer dates.
+
+        #dt = datetime.datetime.fromtimestamp(float(row["committer_epoch"]));
+        #ds_df.loc[i, 'committer_epoch'] = dt;
+        
+        #committer_dates.append(dt.strftime("%Y-%m-%d %H:%M:%S " + time.tzname[1])); # (Account for Daylight Saving Time.)
+
+    #ds_df['committer_date'] = committer_dates; # Add new column for committer dates as strings.
+    
+    hover = bokeh.models.HoverTool(tooltips=[('github_hostname', '@github_hostname'),
+                                             ('repo_owner', '@repo_owner'),
+                                             ('repo_name', '@repo_name'),
+                                             ('path_in_repo', '@path_in_repo'),
+                                             (commit_attribute, '@'+commit_attribute)
+                                             ]);#,
+                                             #('date', '@committer_date'),
+                                             #('num_lines_changed', '@num_lines_changed'),
+                                             #('num_lines_inserted', '@num_lines_inserted'),
+                                             #('num_lines_deleted', '@num_lines_deleted'),
+                                             #('num_lines_modified', '@num_lines_modified')]);
+    
+    title = "Commit Attribute Activity (N=" + str(num_projects) + ")";
+
+    #commit_attributes = ['num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
+
+    ylabel = commit_attribute_titles_dict[commit_attribute];
+    
+    p = bokeh.plotting.figure(#plot_width=400,
+                              #plot_height=400,
+                              tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save, ''reset'],
+                              title=title,
+                              x_axis_label="Time",
+                              x_axis_type='datetime',
+                              y_axis_label=ylabel
+                              );
+    
+    p.title.align='center';
+    p.title.text_font_size=font_size;
+    p.xaxis.major_label_text_font_size=font_size;
+    p.xaxis.axis_label_text_font_size=font_size;
+    p.yaxis.major_label_text_font_size=font_size;
+    p.yaxis.axis_label_text_font_size=font_size;
+
+    for j in range(0, num_projects): # For each project...
+
+        df = ds_df[(ds_df['github_hostname'] == project_ids_df.iloc[j]['github_hostname']) &
+                   (ds_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
+                   (ds_df['repo_name'] == project_ids_df.iloc[j]['repo_name']) &
+                   (ds_df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo'])];
+        
+        palette_index = j % (len(bokeh.palettes.Dark2_5));
+        p = process_commit_attributes_activity(commit_attribute, palette_index, df, p);
 
     figs_list.append(p);
 
@@ -845,7 +940,16 @@ def main():
         get_commit_patterns(project_ids_df, ds_df);
 
         num_features = len(FEATURES);
+        
+        commit_attributes = ['num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
 
+        num_commit_attributes = len(commit_attributes);
+
+        for i in range(0, num_commit_attributes):
+
+            commit_attribute = commit_attributes[i];
+            get_commit_attributes_activity(commit_attribute, project_ids_df, ds_df);
+        
         for i in range(0, num_features):
             
             feature = FEATURES[i];
