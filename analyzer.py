@@ -73,12 +73,13 @@ DTDELTA_LABELS = {'Y' : 'total_num_years_active',
                   'S' : 'total_num_seconds_active'};
 
 # List of recognized datetime delta units.
-DTDELTA_CODES = ['Y', # 'year'
-                 'm', # 'month'
-                 'd', # 'day'
-                 'H', # 'hour'
-                 'M', # 'minute'
-                 'S']; # 'second'
+DTDELTA_CODES = {'Y' : 'year',
+                 'm' : 'month',
+                 'd' : 'day',
+                 'H' : 'hour',
+                 'M' : 'minute',
+                 'S' : 'second'
+                 };
 
 
 def check_args():
@@ -201,8 +202,8 @@ def process_timelines(df, p):
     
     source = bokeh.plotting.ColumnDataSource(data=data);
     
-    p.circle('committer_epoch', 'project_index', source=source, line_color='green', fill_color='green');
-    p.line('committer_epoch', 'project_index', source=source, line_color='green');
+    p.circle('committer_dt', 'project_index', source=source, line_color='green', fill_color='green');
+    p.line('committer_dt', 'project_index', source=source, line_color='green');
     
     return p;
 
@@ -215,13 +216,17 @@ def get_commit_patterns(project_ids_df, ds_df):
     num_projects = project_ids_df.shape[0];
     
     committer_dates = list();
+    #ds_df = ds_df.copy();
+    c = list();
     for i, row in ds_df.iterrows(): # Format committer dates.
 
         dt = datetime.datetime.fromtimestamp(float(row["committer_epoch"]));
-        ds_df.loc[i, 'committer_epoch'] = dt;
+        c.append(dt);
         
         committer_dates.append(dt.strftime("%Y-%m-%d %H:%M:%S " + time.tzname[1])); # (Account for Daylight Saving Time.)
 
+    #c = list();
+    ds_df['committer_dt'] = c; # Add new column for committer dates as strings.
     ds_df['committer_date'] = committer_dates; # Add new column for committer dates as strings.
     
     hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
@@ -289,14 +294,14 @@ def get_commit_attribute_patterns(commit_attribute, project_ids_df, ds_df):
     num_records = ds_df.shape[0];
     drop_these = list();
 
-    ds_df_copy = ds_df.copy();
-    _ds_df = ds_df_copy[(ds_df_copy[commit_attribute] > 0)];
+    #ds_df_copy = ds_df.copy();
+    _ds_df = ds_df[(ds_df[commit_attribute] > 0)];
 
     #ifor i in range(0, num_records):
         #commit_record = ds_df.iloc[i];
         #if ()
     
-    #committer_dates = list();
+    committer_dt = list();
     #for i, row in ds_df.iterrows(): # Format committer dates.
 
     #    dt = datetime.datetime.fromtimestamp(float(row["committer_epoch"]));
@@ -304,7 +309,7 @@ def get_commit_attribute_patterns(commit_attribute, project_ids_df, ds_df):
         
     #    committer_dates.append(dt.strftime("%Y-%m-%d %H:%M:%S " + time.tzname[1])); # (Account for Daylight Saving Time.)
 
-    #ds_df['committer_date'] = committer_dates; # Add new column for committer dates as strings.
+    #_ds_df['committer_'+dtdelta] = committer_dt; # Add new column for committer dates as strings.
     
     hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
                                              ('repo_owner', '@repo_owner'),
@@ -371,8 +376,8 @@ def process_commit_attributes_activity(commit_attribute, palette_index, df, p):
     
     source = bokeh.plotting.ColumnDataSource(data=data);
  
-    p.circle('committer_epoch', commit_attribute, source=source, line_color=bokeh.palettes.Dark2_5[palette_index], fill_color=bokeh.palettes.Dark2_5[palette_index]);
-    p.line('committer_epoch', commit_attribute, source=source, line_color=bokeh.palettes.Dark2_5[palette_index]);
+    p.circle('committer_dt', commit_attribute, source=source, line_color=bokeh.palettes.Dark2_5[palette_index], fill_color=bokeh.palettes.Dark2_5[palette_index]);
+    p.line('committer_dt', commit_attribute, source=source, line_color=bokeh.palettes.Dark2_5[palette_index]);
     
     return p;
 
@@ -384,65 +389,102 @@ def get_commit_attributes_activity(commit_attribute, project_ids_df, ds_df):
     
     num_projects = project_ids_df.shape[0];
     
-    #committer_dates = list();
+    committer_dates = list();
     #print ds_df
-    #for i, row in ds_df.iterrows(): # Format committer dates.
+    #c = list();
+    #c = list();
+    global dtdeltas;
+    num_dtdeltas = len(dtdeltas);
+    print dtdeltas
+    for l in range(0, num_dtdeltas):
 
-        #dt = datetime.datetime.fromtimestamp(float(row["committer_epoch"]));
-        #ds_df.loc[i, 'committer_epoch'] = dt;
+        dtdelta_code = dtdeltas[l];
+
+        c = list();
+        cd = list();
+        for i, row in ds_df.iterrows(): # Format committer dates.
+
+            #epoch_to_local_utc();
+            dt = row['committer_dt'];
+            print dt
+            dtdelta_str = get_dtdelta_str(dt, dtdelta_code)
+            c.append(dtdelta_str);
+            dtdelta_strr = get_dtdelta_notdt_str(dtdelta_code);
+            dtdelta_dt = datetime.datetime.strptime(dtdelta_str, dtdelta_strr);
+            #row['committer_dt'] = dtdelta_dt
+            print dtdelta_dt
+            cd.append(dtdelta_dt);
+            
+            #committer_dates.append(dt.strftime("%Y-%m-%d %H:%M:%S " + time.tzname[1])); # (Account for Daylight Saving Time.)
+
+        #c = list();
+        ds_df['committer_dt'] = cd
+        ds_df['committer_dtdelta'] = c; # Add new column for committer dates as strings.
+        print c[0]
+
+        ATTRS_EXCLUDE = ['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo', 'committer_dtdelta'];
+        ATTRS_INCLUDE = [commit_attribute];
+        df = ds_df[ATTRS_EXCLUDE + ATTRS_INCLUDE];
+        df = df.groupby(ATTRS_EXCLUDE)[ATTRS_INCLUDE].sum();
+        #ds_df['committer_date'] = committer_dates; # Add new column for committer dates as strings.
         
-        #committer_dates.append(dt.strftime("%Y-%m-%d %H:%M:%S " + time.tzname[1])); # (Account for Daylight Saving Time.)
+        #for i, row in ds_df.iterrows(): # Format committer dates.
 
-    #ds_df['committer_date'] = committer_dates; # Add new column for committer dates as strings.
-    
-    hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
-                                             ('repo_owner', '@repo_owner'),
-                                             ('repo_name', '@repo_name'),
-                                             ('path_in_repo', '@path_in_repo'),
-                                             ('date', '@committer_date'),
-                                             (commit_attribute, '@'+commit_attribute)
-                                             ]);#,
-                                             #('num_lines_changed', '@num_lines_changed'),
-                                             #('num_lines_inserted', '@num_lines_inserted'),
-                                             #('num_lines_deleted', '@num_lines_deleted'),
-                                             #('num_lines_modified', '@num_lines_modified')]);
-    
-    title = "Commit Attribute Activity (N=" + str(num_projects) + ")";
+            #dt = datetime.datetime.fromtimestamp(float(row["committer_epoch"]));
+            #ds_df.loc[i, 'committer_epoch'] = dt;
+            
+            #committer_dates.append(dt.strftime("%Y-%m-%d %H:%M:%S " + time.tzname[1])); # (Account for Daylight Saving Time.)
 
-    #commit_attributes = ['num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
-
-    ylabel = commit_attribute_titles_dict[commit_attribute];
-    
-    p = bokeh.plotting.figure(#plot_width=400,
-                              #plot_height=400,
-                              tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save, ''reset'],
-                              title=title,
-                              x_axis_label="Time",
-                              x_axis_type='datetime',
-                              y_axis_label=ylabel
-                              );
-
-    #years = ['%Y'];
-    p.xaxis.formatter = bokeh.models.formatters.DatetimeTickFormatter(minutes=[''], minsec=[''], seconds=[''], milliseconds=[''], microseconds=['']);#years);
-    
-    p.title.align='center';
-    p.title.text_font_size=font_size;
-    p.xaxis.major_label_text_font_size=font_size;
-    p.xaxis.axis_label_text_font_size=font_size;
-    p.yaxis.major_label_text_font_size=font_size;
-    p.yaxis.axis_label_text_font_size=font_size;
-
-    for j in range(0, num_projects): # For each project...
-
-        df = ds_df[(ds_df['repo_remote_hostname'] == project_ids_df.iloc[j]['repo_remote_hostname']) &
-                   (ds_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
-                   (ds_df['repo_name'] == project_ids_df.iloc[j]['repo_name']) &
-                   (ds_df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo'])];
+        #ds_df['committer_date'] = committer_dates; # Add new column for committer dates as strings.
         
-        palette_index = j % (len(bokeh.palettes.Dark2_5));
-        p = process_commit_attributes_activity(commit_attribute, palette_index, df, p);
+        hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
+                                                 ('repo_owner', '@repo_owner'),
+                                                 ('repo_name', '@repo_name'),
+                                                 ('path_in_repo', '@path_in_repo'),
+                                                 ('date', '@committer_dtdelta'),
+                                                 (commit_attribute, '@'+commit_attribute)
+                                                 ]);#,
+                                                 #('num_lines_changed', '@num_lines_changed'),
+                                                 #('num_lines_inserted', '@num_lines_inserted'),
+                                                 #('num_lines_deleted', '@num_lines_deleted'),
+                                                 #('num_lines_modified', '@num_lines_modified')]);
+        
+        title = "Commit Attribute Activity (N=" + str(num_projects) + ")";
 
-    figs_list.append(p);
+        #commit_attributes = ['num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
+
+        ylabel = commit_attribute_titles_dict[commit_attribute];
+        
+        p = bokeh.plotting.figure(#plot_width=400,
+                                  #plot_height=400,
+                                  tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save, ''reset'],
+                                  title=title,
+                                  x_axis_label="Date (in ...)",
+                                  x_axis_type='datetime',
+                                  y_axis_label=ylabel
+                                  );
+
+        #years = ['%Y'];
+        p.xaxis.formatter = bokeh.models.formatters.DatetimeTickFormatter(minutes=[''], minsec=[''], seconds=[''], milliseconds=[''], microseconds=['']);#years);
+        
+        p.title.align='center';
+        p.title.text_font_size=font_size;
+        p.xaxis.major_label_text_font_size=font_size;
+        p.xaxis.axis_label_text_font_size=font_size;
+        p.yaxis.major_label_text_font_size=font_size;
+        p.yaxis.axis_label_text_font_size=font_size;
+
+        for j in range(0, num_projects): # For each project...
+
+            df = ds_df[(ds_df['repo_remote_hostname'] == project_ids_df.iloc[j]['repo_remote_hostname']) &
+                       (ds_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
+                       (ds_df['repo_name'] == project_ids_df.iloc[j]['repo_name']) &
+                       (ds_df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo'])];
+            
+            palette_index = j % (len(bokeh.palettes.Dark2_5));
+            p = process_commit_attributes_activity(commit_attribute, palette_index, df, p);
+
+        figs_list.append(p);
 
 
 # Get datetime delta strftime-like string corresponding to datetime delta code.
@@ -460,6 +502,23 @@ def get_dtdelta_str(dt, dtdelta_code):
         return dt.strftime('%Y-%m-%d %H:%M:00');
     elif (dtdelta_code == 'S'):
         return dt.strftime('%Y-%m-%d %H:%M:%S');
+
+
+# Get datetime delta strftime-like string corresponding to datetime delta code.
+def get_dtdelta_notdt_str(dtdelta_code):
+   
+    if (dtdelta_code == 'Y'):
+        return '%Y';
+    elif (dtdelta_code == 'm'):
+        return '%Y-%m';
+    elif (dtdelta_code == 'd'):
+        return '%Y-%m-%d';
+    elif (dtdelta_code == 'H'):
+        return '%Y-%m-%d %H:00:00';
+    elif (dtdelta_code == 'M'):
+        return '%Y-%m-%d %H:%M:00';
+    elif (dtdelta_code == 'S'):
+        return '%Y-%m-%d %H:%M:%S';
 
 
 # Convert UNIX epoch to local UTC timestamp. 
