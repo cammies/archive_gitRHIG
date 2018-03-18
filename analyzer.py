@@ -422,7 +422,7 @@ def process_commit_attributes_activity(commit_attribute, palette_index, df, p):
 
 
 # Plot repository timelines for some data set.
-def process_commit_attribute_activity(commit_attribute, project_df, palette_index, p):
+def process_commit_attribute_activity(commit_attribute, dtdelta_format_str, project_df, palette_index, p):
         
     project_dict = dict(project_df);
     
@@ -453,81 +453,83 @@ def get_commit_attribute_activity(commit_attribute, orig_ds_df):
     
     global figs_list;
 
-    ds_df = orig_ds_df.copy();
+    #ds_df = orig_ds_df.copy();
+    relevant_projects_df = orig_ds_df.copy();
     
-    relevant_projects_df = ds_df[(ds_df[commit_attribute] > 0)]; # Get relevant commit records.
+    #relevant_projects_df = ds_df[(ds_df[commit_attribute] > 0)]; # Get relevant commit records.
     project_ids_df = get_project_ids_df(relevant_projects_df);
     num_projects = project_ids_df.shape[0];
         
     plot_title = "\'" + commit_attribute_titles_dict[commit_attribute] + "\' Activity (N=" + str(num_projects) + ")";
     
     global dtdeltas;
-    #num_dtdeltas = len(dtdeltas);
-    #for i in range(0, num_dtdeltas):
+    num_dtdeltas = len(dtdeltas);
+    for i in range(0, num_dtdeltas):
 
-    #dtdelta_code = dtdeltas[i];
+        dtdelta_code = dtdeltas[i];
 
-    #dtdelta_label = DTDELTA_CODE_LABELS[dtdelta_code]; # Get datetime delta label.
-    #dt_column_name = 'committer_' + dtdelta_label;
-    
-    hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
-                                             ('repo_owner', '@repo_owner'),
-                                             ('repo_name', '@repo_name'),
-                                             ('path_in_repo', '@path_in_repo'),
-                                             #('date', '@'+dt_column_name),
-                                             (commit_attribute, '@'+commit_attribute)]);
-
-    #dtdelta_unit_name = DTDELTA_CODE_LABELS[dtdelta_code];
-    xlabel = 'i'#dtdelta_unit_name[:-1].capitalize(); # Remove trailing 's' and capitalize.
-    
-    ylabel = commit_attribute_titles_dict[commit_attribute];
-    
-    p = bokeh.plotting.figure(tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save', 'reset'],
-                              title=plot_title,
-                              x_axis_label=xlabel,
-                              x_axis_type='datetime',
-                              y_axis_label=ylabel);
-
-    #(microsec, millisec, sec, msec, mins, hrmin, hr, day, mo, yr) = get_DatetimeTickFormatter_scales(dtdelta_code);
-    #p.xaxis.formatter = bokeh.models.formatters.DatetimeTickFormatter(microseconds=microsec,
-    #                                                                  milliseconds=millisec,
-    #                                                                  seconds=sec,
-    #                                                                  minsec=msec,
-    #                                                                  minutes=mins,
-    #                                                                  hourmin=hrmin,
-    #                                                                  hours=hr,
-    #                                                                  days=day,
-    #                                                                  months=mo,
-    #                                                                  years=yr);
-    
-    p.title.align='center';
-    p.title.text_font_size=font_size;
-    p.xaxis.major_label_text_font_size=font_size;
-    p.xaxis.axis_label_text_font_size=font_size;
-    p.yaxis.major_label_text_font_size=font_size;
-    p.yaxis.axis_label_text_font_size=font_size;
-    
-    #dtdelta_format_str = get_dtdelta_format_str2(dtdelta_code);
-    
-    for j in range(0, num_projects): # For each project...
-
-        project_df = relevant_projects_df[(relevant_projects_df['repo_remote_hostname'] == project_ids_df.iloc[j]['repo_remote_hostname']) &
-                                          (relevant_projects_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
-                                          (relevant_projects_df['repo_name'] == project_ids_df.iloc[j]['repo_name']) &
-                                          (relevant_projects_df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo'])];
+        dtdelta_label = DTDELTA_CODE_LABELS[dtdelta_code]; # Get datetime delta label.
+        dt_column_name = 'committer_' + dtdelta_label;
         
-        EXCLUDE = ['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo', 'committer_datetime'];
-        INCLUDE = [commit_attribute];
-        
-        project_df = project_df[EXCLUDE + INCLUDE];
-        project_df = project_df.groupby(EXCLUDE)[INCLUDE].sum();
+        hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
+                                                 ('repo_owner', '@repo_owner'),
+                                                 ('repo_name', '@repo_name'),
+                                                 ('path_in_repo', '@path_in_repo'),
+                                                 #('date', '@'+dt_column_name),
+                                                 (commit_attribute, '@'+commit_attribute)]);
 
-        #print type(project_df[dt_column_name].iloc[0])
+        dtdelta_unit_name = DTDELTA_CODE_LABELS[dtdelta_code];
+        xlabel = dtdelta_unit_name[:-1].capitalize(); # Remove trailing 's' and capitalize.
         
-        palette_index = j % (len(bokeh.palettes.Dark2_5));
-        p = process_commit_attribute_activity(commit_attribute, project_df, palette_index, p);
+        ylabel = commit_attribute_titles_dict[commit_attribute];
+        
+        p = bokeh.plotting.figure(tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save', 'reset'],
+                                  title=plot_title,
+                                  x_axis_label=xlabel,
+                                  x_axis_type='datetime',
+                                  y_axis_label=ylabel);
 
-    figs_list.append(p);
+        (microsec, millisec, sec, msec, mins, hrmin, hr, day, mo, yr) = get_DatetimeTickFormatter_scales(dtdelta_code);
+        p.xaxis.formatter = bokeh.models.formatters.DatetimeTickFormatter(microseconds=microsec,
+                                                                          milliseconds=millisec,
+                                                                          seconds=sec,
+                                                                          minsec=msec,
+                                                                          minutes=mins,
+                                                                          hourmin=hrmin,
+                                                                          hours=hr,
+                                                                          days=day,
+                                                                          months=mo,
+                                                                          years=yr);
+        
+        p.title.align='center';
+        p.title.text_font_size=font_size;
+        p.xaxis.major_label_text_font_size=font_size;
+        p.xaxis.axis_label_text_font_size=font_size;
+        p.yaxis.major_label_text_font_size=font_size;
+        p.yaxis.axis_label_text_font_size=font_size;
+        
+        dtdelta_format_str = get_dtdelta_format_str2(dtdelta_code);
+        
+        for j in range(0, num_projects): # For each project...
+
+            project_df = relevant_projects_df[(relevant_projects_df['repo_remote_hostname'] == project_ids_df.iloc[j]['repo_remote_hostname']) &
+                                              (relevant_projects_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
+                                              (relevant_projects_df['repo_name'] == project_ids_df.iloc[j]['repo_name']) &
+                                              (relevant_projects_df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo'])];
+            
+            #EXCLUDE = ['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo', 'committer_datetime'];
+            #INCLUDE = [commit_attribute];
+            
+            #p_df = project_df[EXCLUDE + INCLUDE];
+            p_df = project_df;
+            #p_df = p_df.groupby(EXCLUDE)[INCLUDE].sum();
+
+            print p_df;#[dt_column_name].iloc[0])
+            
+            palette_index = j % (len(bokeh.palettes.Dark2_5));
+            p = process_commit_attribute_activity(commit_attribute, dtdelta_format_str, p_df, palette_index, p);
+
+        figs_list.append(p);
 
 
 # Get datetime delta strftime-like string corresponding to datetime delta code.
