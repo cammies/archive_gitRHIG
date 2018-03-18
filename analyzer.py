@@ -228,7 +228,7 @@ def prepare_records(old_ds_df):
 
     #print df;
 
-    sh.write_dfs_to_file([(df, 'a', False)], './s.xlsx');
+    #sh.write_dfs_to_file([(df, 'a', False)], './s.xlsx');
     sys.exit();
         
     return df;
