@@ -56,7 +56,7 @@ def process_args():
     argparser.add_argument('--iwidths', help="interval width", type=str);
     argparser.add_argument('--icounts', help="interval count", type=str);
     argparser.add_argument('-d','--directory', help="runtime working directory", type=str);
-    #argparser.add_argument('--dt-deltas', help="which datetime deltas to consider", type=str);
+    argparser.add_argument('--dt-deltas', help="which datetime deltas to consider", type=str);
     argparser.add_argument('--labels', help="label commit records", type=str);
     argparser.add_argument('--since', help="analyze information about commits records more recent than a specific date", type=str);
     argparser.add_argument('--until', help="analyze information about commits records older than a specific date", type=str);
@@ -72,14 +72,13 @@ DTDELTA_LABELS = {'Y' : 'total_num_years_active',
                   'M' : 'total_num_minutes_active',
                   'S' : 'total_num_seconds_active'};
 
-# List of recognized datetime delta units.
-DTDELTA_CODES = {'Y' : 'year',
-                 'm' : 'month',
-                 'd' : 'day',
-                 'H' : 'hour',
-                 'M' : 'minute',
-                 'S' : 'second'
-                 };
+# Dict of recognized datetime delta units and corresponding labels.
+DTDELTA_CODE_LABELS = {'Y' : 'years',
+                       'm' : 'months',
+                       'd' : 'days',
+                       'H' : 'hours',
+                       'M' : 'minutes',
+                       'S' : 'seconds'};
 
 
 def check_args():
@@ -114,15 +113,15 @@ def check_args():
     args.directory = sh.get_wd(args.directory);
     
     # Get valid DTDs.
-    #dtd_codes = list();
-    #if (args.dt_deltas):
-    #    args.dt_deltas = sh.split_str(',', args.dt_deltas);
-    #    for dtd_code in args.dt_deltas:
-    #        if (dtd_code in DTD_CODES):
-    #            dtd_codes.append(dtd_code);
-    #        else:
-    #            print(sh.get_warning_str("Unrecognized datetime delta code \'" + dtd_code + "\'"));
-    #args.dt_deltas = list(set(dtd_codes));
+    dtd_codes = list();
+    if (args.dt_deltas):
+        args.dt_deltas = sh.split_str(',', args.dt_deltas);
+        for dtd_code in args.dt_deltas:
+            if (dtd_code in DTDELTA_CODE_LABELS):
+                dtd_codes.append(dtd_code);
+            else:
+                print(sh.get_warning_str("Unrecognized datetime delta code \'" + dtd_code + "\'"));
+    args.dt_deltas = list(set(dtd_codes));
 
     # Label commit records.
     args.labels = sh.get_labels(args.labels);
@@ -145,13 +144,35 @@ def echo_args():
 
 
 #
-def prune_records(ds_df):
+def prepare_records(old_ds_df):
+
+    ds_df = old_ds_df.copy();
 
     since = float(sh.utc_str_to_epoch(args.since));
     until = float(sh.utc_str_to_epoch(args.until));
 
     init_num_records = ds_df.shape[0];
 
+    global dtdeltas;
+    if (dtdeltas):
+
+        committer_epochs = ds_df['committer_epoch'].tolist();
+        #print committer_epochs
+        #dt = datetime.datetime.fromtimestamp(float(ds_df['committer_epoch']));
+        ds_df['committer_datetime'] = [datetime.datetime.fromtimestamp(e) for e in committer_epochs];
+        #ds_df['committer_datetime'] = 
+        
+        num_dtdeltas = len(dtdeltas);
+        for k in range(0, num_dtdeltas):
+
+            dtdelta_code = dtdeltas[k]; # Get datetime delta code.
+            dtdelta_label = DTDELTA_CODE_LABELS[dtdelta_code]; # Get datetime delta label.
+            dt_column_name = 'committer_' + dtdelta_label;
+            ds_df[dt_column_name] = '';
+    
+    #init_num_records = ds_df.shape[0];
+
+    # Determine which records to prune.
     drop_these = list(); # List of indices of corresponding DataFrame rows to drop.
     for i in range(0, init_num_records): # For each project commit record (row) in data store DataFrame...
         
@@ -173,14 +194,42 @@ def prune_records(ds_df):
             include_commit_record = False;
             for label in args.labels: # For EACH user-supplied label...
                 
-                if (label in commit_record_labels_tuple): # If commit record includes label... 
+                if (label in commit_record_labels_tuple): # If commit record is labelled with 'label'... 
                     include_commit_record = True; # Indicate to include this commit record in resulting DataFrame.
             
             if (not include_commit_record):
                 drop_these.append(i);
+        
+        if (i not in drop_these): # If this commit record is to be included in final DataFrame...
+
+            for j in range(0, num_dtdeltas):
+
+                dtdelta_code = dtdeltas[j]; # Get datetime delta code.
+                dtdelta_label = DTDELTA_CODE_LABELS[dtdelta_code]; # Get datetime delta label.
+                dt_column_name = 'committer_' + dtdelta_label;
+                
+                committer_datetime = commit_record['committer_datetime']; # Get committer datetime.
+                #print committer_datetime
+                dtdelta_dt_str = get_dtdelta_dt_str(committer_datetime, dtdelta_code); # Get datetime string from committer datetime.
+                #print dtdelta_label
+                #print dtdelta_dt_str
+                #dtdelta_dt_str = committer_datetime.strftime('%Y-%m-%d %H:%M:%S'); #get_dtdelta_format_str(dtdelta_code); # Get format string for current datetime delta.
+                dtdelta_format_str = get_dtdelta_format_str(dtdelta_code); # Get format string for current datetime delta.
+                dtdelta_dt = datetime.datetime.strptime(dtdelta_dt_str, dtdelta_format_str); # Format committer datetime (string) w.r.t. current datetime delta.
+                #print type(dtdelta_dt);
+                dtdelta_dt = dtdelta_dt.strftime(dtdelta_format_str);
+                #print type(dtdelta_dt);
+                
+                ds_df.loc[i, dt_column_name] = dtdelta_dt;
+            
 
     df = ds_df.drop(drop_these); # Drop DataFrame rows (given indices specifed).
     df = df.reset_index(drop=True); # Reset DataFrame row indices.
+
+    #print df;
+
+    sh.write_dfs_to_file([(df, 'a', False)], './s.xlsx');
+    sys.exit();
         
     return df;
 
@@ -395,7 +444,7 @@ def get_commit_attributes_activity(commit_attribute, project_ids_df, ds_df):
     #c = list();
     global dtdeltas;
     num_dtdeltas = len(dtdeltas);
-    print dtdeltas
+    #print dtdeltas
     for l in range(0, num_dtdeltas):
 
         dtdelta_code = dtdeltas[l];
@@ -407,7 +456,7 @@ def get_commit_attributes_activity(commit_attribute, project_ids_df, ds_df):
             #epoch_to_local_utc();
             dt = row['committer_dt'];
             print dt
-            dtdelta_str = get_dtdelta_str(dt, dtdelta_code)
+            dtdelta_str = get_dtdelta_dt_str(dt, dtdelta_code)
             c.append(dtdelta_str);
             dtdelta_strr = get_dtdelta_notdt_str(dtdelta_code);
             dtdelta_dt = datetime.datetime.strptime(dtdelta_str, dtdelta_strr);
@@ -420,12 +469,14 @@ def get_commit_attributes_activity(commit_attribute, project_ids_df, ds_df):
         #c = list();
         ds_df['committer_dt'] = cd
         ds_df['committer_dtdelta'] = c; # Add new column for committer dates as strings.
-        print c[0]
+        #print c[0]
 
-        ATTRS_EXCLUDE = ['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo', 'committer_dtdelta'];
+        ATTRS_EXCLUDE = ['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo', 'committer_dt', 'committer_dtdelta'];
         ATTRS_INCLUDE = [commit_attribute];
-        df = ds_df[ATTRS_EXCLUDE + ATTRS_INCLUDE];
-        df = df.groupby(ATTRS_EXCLUDE)[ATTRS_INCLUDE].sum();
+        #df = ds_df[(ds_df[commit_attribute] > 0)];
+        ds_df = ds_df[ATTRS_EXCLUDE + ATTRS_INCLUDE];
+        df = ds_df.groupby(ATTRS_EXCLUDE)[ATTRS_INCLUDE].sum();
+        print df
         #ds_df['committer_date'] = committer_dates; # Add new column for committer dates as strings.
         
         #for i, row in ds_df.iterrows(): # Format committer dates.
@@ -474,21 +525,24 @@ def get_commit_attributes_activity(commit_attribute, project_ids_df, ds_df):
         p.yaxis.major_label_text_font_size=font_size;
         p.yaxis.axis_label_text_font_size=font_size;
 
+        print df['repo_remote_hostname']
         for j in range(0, num_projects): # For each project...
 
-            df = ds_df[(ds_df['repo_remote_hostname'] == project_ids_df.iloc[j]['repo_remote_hostname']) &
-                       (ds_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
-                       (ds_df['repo_name'] == project_ids_df.iloc[j]['repo_name']) &
-                       (ds_df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo'])];
+            _df = df[(df['repo_remote_hostname'] == project_ids_df.iloc[j]['repo_remote_hostname']) &
+                       (df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
+                       (df['repo_name'] == project_ids_df.iloc[j]['repo_name']) &
+                       (df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo']) &
+                       (df[commit_attribute] > 0)];
             
-            palette_index = j % (len(bokeh.palettes.Dark2_5));
-            p = process_commit_attributes_activity(commit_attribute, palette_index, df, p);
+            if (not _df.empty):
+                palette_index = j % (len(bokeh.palettes.Dark2_5));
+                p = process_commit_attributes_activity(commit_attribute, palette_index, _df, p);
 
         figs_list.append(p);
 
 
 # Get datetime delta strftime-like string corresponding to datetime delta code.
-def get_dtdelta_str(dt, dtdelta_code):
+def get_dtdelta_dt_str(dt, dtdelta_code):
    
     if (dtdelta_code == 'Y'):
         return dt.strftime('%Y');
@@ -505,7 +559,7 @@ def get_dtdelta_str(dt, dtdelta_code):
 
 
 # Get datetime delta strftime-like string corresponding to datetime delta code.
-def get_dtdelta_notdt_str(dtdelta_code):
+def get_dtdelta_format_str(dtdelta_code):
    
     if (dtdelta_code == 'Y'):
         return '%Y';
@@ -534,7 +588,7 @@ def get_num_dtdeltas(epochs, dtdelta_code):
     for epoch in epochs:
 
         dt = epoch_to_local_utc(epoch);
-        dtdelta_str = get_dtdelta_str(dt, dtdelta_code);
+        dtdelta_str = get_dtdelta_dt_str(dt, dtdelta_code);
         dtdeltas.append(dtdelta_str);
 
     dtdeltas = list(set(dtdeltas));
@@ -1099,7 +1153,10 @@ def main():
     print('');
     start = datetime.datetime.now();
 
-    ds_df = prune_records(ds_df);
+    global dtdeltas;
+    dtdeltas = list(set(['d'] + args.dt_deltas));
+    
+    ds_df = prepare_records(ds_df);
 
     if (not ds_df.empty):
         
@@ -1120,8 +1177,6 @@ def main():
                     'total_num_lines_modified'];
         
         dtdelta_labels = list();
-        global dtdeltas;
-        dtdeltas = ['d'];
         for dtdelta_code in dtdeltas:
 
             dtdelta_label = DTDELTA_LABELS[dtdelta_code];
