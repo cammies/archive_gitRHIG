@@ -162,6 +162,8 @@ def prepare_records(old_ds_df):
             dtdelta_label = DTDELTA_CODE_LABELS[dtdelta_code]; # Get datetime delta label.
             dt_column_name = 'committer_' + dtdelta_label;
             ds_df[dt_column_name] = '';
+            dt_str_column_name = 'committer_' + dtdelta_label + '_str';
+            ds_df[dt_str_column_name] = '';
     
     since = float(sh.utc_str_to_epoch(args.since));
     until = float(sh.utc_str_to_epoch(args.until));
@@ -203,15 +205,20 @@ def prepare_records(old_ds_df):
                 dtdelta_code = dtdeltas[j]; # Get datetime delta code.
                 dtdelta_label = DTDELTA_CODE_LABELS[dtdelta_code]; # Get datetime delta label.
                 dt_column_name = 'committer_' + dtdelta_label;
+                dt_str_column_name = 'committer_' + dtdelta_label + '_str';
                 
                 committer_datetime = commit_record['committer_datetime']; # Get committer datetime.
                 dtdelta_dt_str = get_dtdelta_dt_str(committer_datetime, dtdelta_code); # Get datetime string from committer datetime.
                 dtdelta_format_str = get_dtdelta_format_str(dtdelta_code); # Get format string for current datetime delta.
                 dtdelta_dt = datetime.datetime.strptime(dtdelta_dt_str, dtdelta_format_str); # Format committer datetime (string) w.r.t. current datetime delta.
                 
-                #dtdelta_dt = dtdelta_dt.strftime(dtdelta_format_str);
-                
                 ds_df.loc[i, dt_column_name] = dtdelta_dt;
+
+                dtdelta_format_str = get_dtdelta_format_str2(dtdelta_code);
+                dtdelta_dt_str = dtdelta_dt.strftime(dtdelta_format_str);
+                
+                #ds_df[dt_str_column_name] = '';
+                ds_df.loc[i, dt_str_column_name] = dtdelta_dt_str;
             
 
     ds_df = ds_df.drop(drop_these); # Drop DataFrame rows (given indices specifed).
@@ -422,7 +429,7 @@ def process_commit_attributes_activity(commit_attribute, palette_index, df, p):
 
 
 # Plot repository timelines for some data set.
-def process_commit_attribute_activity(commit_attribute, dtdelta_format_str, project_df, palette_index, p):
+def process_commit_attribute_activity(commit_attribute, dt_column_name, dtdelta_format_str, project_df, palette_index, p):
         
     project_dict = dict(project_df);
     
@@ -432,15 +439,15 @@ def process_commit_attribute_activity(commit_attribute, dtdelta_format_str, proj
     #dtdelta_format_str = get_dtdelta_format_str(dtdelta_code);
     #datetime.datetime.strptime(dtdelta_dt_str, dtdelta_format_str);
     #p.circle(datetime.datetime.strptime(dt_column_name, dtdelta_format_str),
-    #p.circle(dt_column_name,
-    p.circle('committer_datetime',
+    p.circle(dt_column_name,
+    #p.circle('committer_datetime',
              commit_attribute,
              source=project_data_source,
              line_color=bokeh.palettes.Dark2_5[palette_index],
              fill_color=bokeh.palettes.Dark2_5[palette_index]);
     #p.line(datetime.datetime.strptime(dt_column_name, dtdelta_format_str),
-    #p.line(dt_column_name,
-    p.line('committer_datetime',
+    p.line(dt_column_name,
+    #p.line('committer_datetime',
            commit_attribute,
            source=project_data_source,
            line_color=bokeh.palettes.Dark2_5[palette_index]);
@@ -453,10 +460,10 @@ def get_commit_attribute_activity(commit_attribute, orig_ds_df):
     
     global figs_list;
 
-    #ds_df = orig_ds_df.copy();
-    relevant_projects_df = orig_ds_df.copy();
+    ds_df = orig_ds_df.copy();
+    #relevant_projects_df = orig_ds_df.copy();
     
-    #relevant_projects_df = ds_df[(ds_df[commit_attribute] > 0)]; # Get relevant commit records.
+    relevant_projects_df = ds_df[(ds_df[commit_attribute] > 0)]; # Get relevant commit records.
     project_ids_df = get_project_ids_df(relevant_projects_df);
     num_projects = project_ids_df.shape[0];
         
@@ -470,12 +477,13 @@ def get_commit_attribute_activity(commit_attribute, orig_ds_df):
 
         dtdelta_label = DTDELTA_CODE_LABELS[dtdelta_code]; # Get datetime delta label.
         dt_column_name = 'committer_' + dtdelta_label;
+        dt_str_column_name = 'committer_' + dtdelta_label + '_str';
         
         hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
                                                  ('repo_owner', '@repo_owner'),
                                                  ('repo_name', '@repo_name'),
                                                  ('path_in_repo', '@path_in_repo'),
-                                                 #('date', '@'+dt_column_name),
+                                                 ('date', '@'+dt_str_column_name),
                                                  (commit_attribute, '@'+commit_attribute)]);
 
         dtdelta_unit_name = DTDELTA_CODE_LABELS[dtdelta_code];
@@ -510,24 +518,60 @@ def get_commit_attribute_activity(commit_attribute, orig_ds_df):
         
         dtdelta_format_str = get_dtdelta_format_str2(dtdelta_code);
         
+        ID = ['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo', dt_column_name, dt_str_column_name];
+        ATTR = [commit_attribute];
+        
+        rel_projects_df = relevant_projects_df[ID + ATTR];
+        
+        project_ids_df = rel_projects_df[ID];#['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo']];
+        project_ids_df = project_ids_df.drop_duplicates(); # Eliminate duplicate DataFrame rows.
+        project_ids_df = project_ids_df.reset_index(drop=True); # Reset DataFrame row indices.
+            
+        num_projects = project_ids_df.shape[0];
         for j in range(0, num_projects): # For each project...
 
-            project_df = relevant_projects_df[(relevant_projects_df['repo_remote_hostname'] == project_ids_df.iloc[j]['repo_remote_hostname']) &
-                                              (relevant_projects_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
-                                              (relevant_projects_df['repo_name'] == project_ids_df.iloc[j]['repo_name']) &
-                                              (relevant_projects_df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo'])];
-            
-            #EXCLUDE = ['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo', 'committer_datetime'];
-            #INCLUDE = [commit_attribute];
-            
-            #p_df = project_df[EXCLUDE + INCLUDE];
-            p_df = project_df;
-            #p_df = p_df.groupby(EXCLUDE)[INCLUDE].sum();
+            #project_df = _project_df.copy()
+            project_df = rel_projects_df[(rel_projects_df['repo_remote_hostname'] == project_ids_df.iloc[j]['repo_remote_hostname']) &
+                                              (rel_projects_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
+                                              (rel_projects_df['repo_name'] == project_ids_df.iloc[j]['repo_name']) &
+                                              (rel_projects_df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo'])];
 
-            print p_df;#[dt_column_name].iloc[0])
+            #num_records = project_df.shape[0];
+            record_ids_df = project_df[ID];
+            record_ids_df = record_ids_df.drop_duplicates(); # Eliminate duplicate DataFrame rows.
+            record_ids_df = record_ids_df.reset_index(drop=True); # Reset DataFrame row indices.
+            num_record_ids = record_ids_df.shape[0];
+            row_labels = [r for r in range(0, num_record_ids)];
+            new_df = pandas.DataFrame(index=row_labels, columns=ID+ATTR);
+            for k in range(0, num_record_ids):
+                rrr = record_ids_df.iloc[k];
+                
+                asdf = project_df[(project_df['repo_remote_hostname'] == rrr['repo_remote_hostname']) &
+                                  (project_df['repo_owner'] == rrr['repo_owner']) &
+                                  (project_df['repo_name'] == rrr['repo_name']) &
+                                  (project_df['path_in_repo'] == rrr['path_in_repo']) &
+                                  (project_df[dt_column_name] == rrr[dt_column_name]) &
+                                  (project_df[dt_str_column_name] == rrr[dt_str_column_name])];# &
+                rrr[commit_attribute] = asdf[commit_attribute].sum();
+                new_df.iloc[k] = rrr;
+
+            #print new_df
+            #sh.write_dfs_to_file([(new_df, 't', False)], "aaa.xlsx");
+            #print ID + ATTR
+            #project_df = project_df[ID + ATTR];
+            #print "snooper snooper snooper"
+            #print project_df
+            #p_df = project_df;
+            #project_df.groupby(ATTR)[ATTR].sum();
+            #project_df = project_df.reset_index(drop=True);
+            #print "snooper snooper snooper"
+            #print project_df
+
+            #sh.write_dfs_to_file([(project_df, 't', False)], "aaa2.xlsx");
+            #print p_df;#[dt_column_name].iloc[0])
             
             palette_index = j % (len(bokeh.palettes.Dark2_5));
-            p = process_commit_attribute_activity(commit_attribute, dtdelta_format_str, p_df, palette_index, p);
+            p = process_commit_attribute_activity(commit_attribute, dt_column_name, dtdelta_format_str, new_df, palette_index, p);
 
         figs_list.append(p);
 
@@ -550,7 +594,7 @@ def get_dtdelta_dt_str(dt, dtdelta_code):
 
 
 # Get datetime delta strftime-like string corresponding to datetime delta code.
-def get_dtdelta_format_str(dtdelta_code):
+def get_dtdelta_format_str2(dtdelta_code):
    
     if (dtdelta_code == 'Y'):
         return '%Y';
@@ -559,15 +603,15 @@ def get_dtdelta_format_str(dtdelta_code):
     elif (dtdelta_code == 'd'):
         return '%Y-%m-%d';
     elif (dtdelta_code == 'H'):
-        return '%Y-%m-%d %H:00:00';
+        return '%Y-%m-%d %H:00:00 '+time.tzname[1];
     elif (dtdelta_code == 'M'):
-        return '%Y-%m-%d %H:%M:00';
+        return '%Y-%m-%d %H:%M:00 '+time.tzname[1];
     elif (dtdelta_code == 'S'):
-        return '%Y-%m-%d %H:%M:%S';
+        return '%Y-%m-%d %H:%M:%S '+time.tzname[1];
 
 
 # Get datetime delta strftime-like string corresponding to datetime delta code.
-def get_dtdelta_format_str2(dtdelta_code):
+def get_dtdelta_format_str(dtdelta_code):
    
     if (dtdelta_code == 'Y'):
         return '%Y';
@@ -1207,14 +1251,13 @@ def main():
         
         commit_attributes = ['num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
 
-        num_commit_attributes = len(commit_attributes);
-        for i in range(0, num_commit_attributes):
+        #num_commit_attributes = len(commit_attributes);
+        #for i in range(0, num_commit_attributes):
 
-            commit_attribute = commit_attributes[i];
+            #commit_attribute = commit_attributes[i];
             
             #get_commit_attribute_patterns(commit_attribute, ds_df);
-            get_commit_attribute_activity(commit_attribute, ds_df);
-        #    get_commit_attributes_activity(commit_attribute, project_ids_df, ds_df);
+            #get_commit_attribute_activity(commit_attribute, ds_df);
 
         global dfs;
         global xlsx_sheet_num;
@@ -1227,8 +1270,8 @@ def main():
             
             feature_freq_dist_df = get_feature_freq_dist_df(feature, project_summaries_df);
 
-            #get_histogram(feature, feature_freq_dist_df);
-            #get_cdf(feature, feature_freq_dist_df);
+            get_histogram(feature, feature_freq_dist_df);
+            get_cdf(feature, feature_freq_dist_df);
 
             sheet_name = '{:09d}'.format(xlsx_sheet_num);
             label = 'per_project_' + feature + '_intervals';
@@ -1244,7 +1287,7 @@ def main():
         pathstr, file_ext = os.path.splitext(args.data_store);
         dir_name = args.directory if args.directory else os.path.dirname(pathstr);
         filename = os.path.basename(pathstr);
-        xlsfile = dir_name + '/' + filename + 'asdf' + '.xlsx';
+        xlsfile = dir_name + '/' + filename + '-quantatative_analytics' + '.xlsx';
         sh.write_dfs_to_file(dfs, xlsfile);
         #xlsfiles.append(xlsfile);
 
