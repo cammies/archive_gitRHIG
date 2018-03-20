@@ -789,9 +789,11 @@ def process_new_histogram(feature_freq_dist_df, p):
 
 
 # Get plot containing development timeline for each repository.
-def get_histogram(feature, feature_freq_dist_df):
+def get_histogram(feature, orig_feature_freq_dist_df):
     
     global figs_list;
+    
+    feature_freq_dist_df = orig_feature_freq_dist_df.copy();
     
     num_projects = feature_freq_dist_df.shape[0];
 
@@ -1175,9 +1177,11 @@ def process_new_cdf(feature, feature_freq_dist_df, p):
 
 
 # Get plot containing development timeline for each repository.
-def get_cdf(feature, feature_freq_dist_df):
+def get_cdf(feature, orig_feature_freq_dist_df):
     
     global figs_list;
+
+    feature_freq_dist_df = orig_feature_freq_dist_df.copy();
     
     num_projects = feature_freq_dist_df.shape[0];
     
