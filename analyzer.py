@@ -225,7 +225,7 @@ def prepare_records(old_ds_df):
     new_ds_df = ds_df.reset_index(drop=True); # Reset DataFrame row indices.
 
     #print ds_df;
-    sh.write_dfs_to_file([(new_ds_df, 'a', False)], './s.xlsx');
+    #sh.write_dfs_to_file([(new_ds_df, 'a', False)], './s.xlsx');
     #sys.exit();
         
     return new_ds_df;
@@ -812,7 +812,7 @@ def get_histogram(feature, feature_freq_dist_df):
                               tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save, ''reset'],
                               title=title,
                               x_axis_label=feature_title,
-                              y_axis_label='Number of Repositories',
+                              y_axis_label='Number of Projects',
                               );
     
     p.title.align='center';
@@ -1049,7 +1049,7 @@ def get_freq_dist_df(feature, project_summaries_df, feature_intervals_df):
 
                 include_row = True;
         else:
-            print ("Nah-ah")
+            #print ("Nah-ah")
             #if (not include_row):
             drop_these.append(i);
     
@@ -1248,7 +1248,7 @@ def main():
         pathstr, file_ext = os.path.splitext(args.data_store);
         dir_name = args.directory if args.directory else os.path.dirname(pathstr);
         filename = os.path.basename(pathstr);
-        htmlfile = dir_name + '/' + filename + '.html';
+        htmlfile = dir_name + '/' + filename + '-visual_analytics' + '.html';
         bokeh.plotting.output_file(htmlfile, title="Project Statistics");
 
         print("Identifying projects...");
