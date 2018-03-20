@@ -958,11 +958,13 @@ def get_feature_intervals_df(feature, use_singleunit_iwidth, project_summaries_d
 
             icount = int(icounts_dict[feature]);
             if (icount > max_val):
-                sh.get_warning_str("\'icount\' >= <max value> in observations");
-                print("Using");
-                icount = max_val; # This way, 'iwidth' will equate to 1.
-            iwidth = int(max_val / icount) + 1;
-            num_intervals = icount
+                print(sh.get_warning_str("\'icount\' >= <max value> in observations"));
+                print("Using " + str(max_val) + " intervals");
+                iwidth = 1;
+                num_intervals = max_val;
+            else:
+                iwidth = int(max_val / icount);
+                num_intervals = icount;
 
         ROW_LABELS = [r for r in range(0, num_intervals+1)]; # '+1' because 0-1 will be its own interval.
         
