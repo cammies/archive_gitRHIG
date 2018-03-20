@@ -929,6 +929,18 @@ def get_feature_intervals_df(feature, use_singleunit_iwidth, project_summaries_d
         iwidth = 1;
         num_intervals = project_summaries_df.shape[0];
     
+        ROW_LABELS = [r for r in range(0, num_intervals)];
+        
+        df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
+        df.fillna(0.0);
+        
+        for i in range(0, num_intervals):
+
+            from_value = project_summaries_df.iloc[i][feature]; # Get feature value for project i.
+            to_value = from_value;
+            df.iloc[i]['>='] = calc_interval_begin(from_value);
+            df.iloc[i]['<'] = calc_interval_end(to_value);
+
     elif (feature in iwidths_dict or
           feature in icounts_dict):
 
@@ -938,44 +950,35 @@ def get_feature_intervals_df(feature, use_singleunit_iwidth, project_summaries_d
         if (feature in iwidths_dict):
 
             iwidth = int(iwidths_dict[feature]);
-            if (iwidth == 1):
-                num_intervals = project_summaries_df.shape[0];
-            else:
-                num_intervals = int(max_val / iwidth) + 1; # '+1' because 0-1 will be its own interval.
+            num_intervals = int(max_val / iwidth);
 
         else: # feature is in icounts_dict...
 
             icount = int(icounts_dict[feature]);
-            if (icount >= max_val):
+            if (icount > max_val):
                 sh.get_warning_str("\'icount\' >= <max value> in observations");
                 print("Using");
-                icount = 0; # This way, 'iwidth' will equate to 1.
+                icount = max_val; # This way, 'iwidth' will equate to 1.
             iwidth = int(max_val / icount) + 1;
-            num_intervals = icount + 1; # '+1' because 0-1 will be its own interval.
+            num_intervals = icount
+
+        ROW_LABELS = [r for r in range(0, num_intervals+1)]; # '+1' because 0-1 will be its own interval.
+        
+        df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
+        df.fillna(0.0);
+        
+        df.iloc[0]['>='] = 0; # First interval will be from 0...
+        df.iloc[0]['<'] = 1; # ...to 1.
+        for i in range(0, num_intervals):
+
+            from_value = i * iwidth;
+            to_value = from_value + iwidth;
+            #df.iloc[i]['>='] = calc_interval_begin(from_value);
+            df.iloc[i+1]['>='] = calc_interval_begin(from_value+1); # '+1' to skip 0 in first loop.
+            df.iloc[i+1]['<'] = calc_interval_end(to_value);
 
     else:
         sys.exit("Oh d-dear!");
-
-    ROW_LABELS = [r for r in range(0, num_intervals)];
-    
-    df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
-    df.fillna(0.0);
-    
-    if (iwidth > 1):
-        df.iloc[0]['>='] = 0; # First interval will be from 0...
-        df.iloc[0]['<'] = 1; # ...to 1.
-    for i in range(0, num_intervals):
-
-        if (iwidth == 1):
-            from_value = project_summaries_df.iloc[i][feature]; # Get feature value for project i.
-            to_value = from_value;
-            df.iloc[i]['>='] = calc_interval_begin(from_value);
-            df.iloc[i]['<'] = calc_interval_end(to_value);
-        else:
-            from_value = i * iwidth;
-            to_value = from_value + iwidth;
-            df.iloc[i+1]['>='] = calc_interval_begin(from_value);
-            df.iloc[i+1]['<'] = calc_interval_end(to_value);
 
     intervals_df = df[['>=','<']];
     intervals_df = intervals_df.drop_duplicates(); # Eliminate duplicate DataFrame rows.
