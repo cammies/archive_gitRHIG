@@ -721,10 +721,10 @@ def get_project_summaries_df(features, project_ids_df, ds_df):
 
     global xlsx_sheet_num;
     global xlsx_page_index_lookup;
-    sheet_name = '{:09d}'.format(xlsx_sheet_num);
-    label = 'project_activity_summaries';
-    xlsx_page_index_lookup.append((sheet_name, label));
-    xlsx_sheet_num = xlsx_sheet_num + 1;
+    sheet_name = 'project_activity_summaries';#'{:09d}'.format(xlsx_sheet_num);
+    #label = 'project_activity_summaries';
+    #xlsx_page_index_lookup.append((sheet_name, label));
+    #xlsx_sheet_num = xlsx_sheet_num + 1;
 
     dfs.append((project_summaries_df, sheet_name, False));
         
@@ -915,7 +915,7 @@ def calc_interval_end(num):
 
 
 #
-def get_feature_intervals_df(feature, project_summaries_df):
+def get_feature_intervals_df(feature, use_singleunit_iwidth, project_summaries_df):
     
     COLUMN_LABELS = ['>=', '<'];
 
@@ -924,61 +924,59 @@ def get_feature_intervals_df(feature, project_summaries_df):
     global iwidths_dict;
     global icounts_dict;
     
-    if (feature in iwidths_dict or
-        feature in icounts_dict):
-
-        print("Attribute \'" + feature + "\' found");
+    if (use_singleunit_iwidth): # If user-defined interval info was left unspecified, use 1-unit width intervals.
+       
+        iwidth = 1;
+        num_intervals = project_summaries_df.shape[0];
+    
+    elif (feature in iwidths_dict or
+          feature in icounts_dict):
 
         values = project_summaries_df[feature].tolist();
-
         max_val = max(values);
 
         if (feature in iwidths_dict):
 
-            #iwidth = iwidths_dict[feature];
             iwidth = int(iwidths_dict[feature]);
-
-            num_intervals = int(max_val / iwidth);
+            if (iwidth == 1):
+                num_intervals = project_summaries_df.shape[0];
+            else:
+                num_intervals = int(max_val / iwidth) + 1; # '+1' because 0-1 will be its own interval.
 
         else: # feature is in icounts_dict...
 
             icount = int(icounts_dict[feature]);
-
-            num_intervals = icount;
-
+            if (icount >= max_val):
+                sh.get_warning_str("\'icount\' >= <max value> in observations");
+                print("Using");
+                icount = 0; # This way, 'iwidth' will equate to 1.
             iwidth = int(max_val / icount) + 1;
+            num_intervals = icount + 1; # '+1' because 0-1 will be its own interval.
 
-        ROW_LABELS = [i for i in range(0, num_intervals+1)]; # '+1' because 0-1 will be its own interval.
-            
-        df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
-        df.fillna(0.0);
-            
+    else:
+        sys.exit("Oh d-dear!");
+
+    ROW_LABELS = [r for r in range(0, num_intervals)];
+    
+    df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
+    df.fillna(0.0);
+    
+    if (iwidth > 1):
         df.iloc[0]['>='] = 0; # First interval will be from 0...
         df.iloc[0]['<'] = 1; # ...to 1.
-        for i in range(0, num_intervals):
+    for i in range(0, num_intervals):
 
-            from_value = i * iwidth;
-            to_value = from_value + iwidth;
-            df.iloc[i+1]['>='] = calc_interval_begin(from_value+1); # '+1' to skip 0 in first loop.
-            df.iloc[i+1]['<'] = calc_interval_end(to_value);
-
-    else: # If user-defined interval info was left unspecified, use 1-unit width intervals.
-        
-        num_intervals = project_summaries_df.shape[0];
-        
-        ROW_LABELS = [r for r in range(0, num_intervals)];
-    
-        df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
-        df.fillna(0.0);
-        
-        for i in range(0, num_intervals): # For each project summary...
-            
+        if (iwidth == 1):
             from_value = project_summaries_df.iloc[i][feature]; # Get feature value for project i.
-            to_value = from_value; # (Since in this case, interval width is only a single unit.)
-            
+            to_value = from_value;
             df.iloc[i]['>='] = calc_interval_begin(from_value);
             df.iloc[i]['<'] = calc_interval_end(to_value);
-    
+        else:
+            from_value = i * iwidth;
+            to_value = from_value + iwidth;
+            df.iloc[i+1]['>='] = calc_interval_begin(from_value);
+            df.iloc[i+1]['<'] = calc_interval_end(to_value);
+
     intervals_df = df[['>=','<']];
     intervals_df = intervals_df.drop_duplicates(); # Eliminate duplicate DataFrame rows.
     intervals_df = intervals_df.reset_index(drop=True); # Reset DataFrame row indices.
@@ -1055,21 +1053,53 @@ def get_freq_dist_df(feature, project_summaries_df, feature_intervals_df):
     df = df.drop(drop_these); # Drop DataFrame rows (given indices specifed).
     df = df.reset_index(drop=True); # Reset DataFrame row indices.
         
-    global xlsx_sheet_num;
-    global xlsx_page_index_lookup;
-    sheet_name = '{:09d}'.format(xlsx_sheet_num);
-    label = feature + '_freq_distributions';
-    xlsx_page_index_lookup.append((sheet_name, label));
-    xlsx_sheet_num = xlsx_sheet_num + 1;
+    #global xlsx_sheet_num;
+    #global xlsx_page_index_lookup;
+    #sheet_name = '{:09d}'.format(xlsx_sheet_num);
+    #label = feature + '_freq_distributions';
+    #xlsx_page_index_lookup.append((sheet_name, label));
+    #xlsx_sheet_num = xlsx_sheet_num + 1;
 
-    writable_df = df.drop(feature, axis=1);
-    dfs.append((writable_df, sheet_name, False));
+    #writable_df = df.drop(feature, axis=1);
+    #dfs.append((writable_df, sheet_name, False));
         
     return df;
 
 
+#
+def get_iwidth_and_num_intervals(feature, project_summaries_df):
+
+    first_value_offset = project_summaries_df.iloc[i][feature]; # Get feature value for project i.
+    global iwidths_dict;
+    global icounts_dict;
+    if (feature in iwidths_dict or
+        feature in icounts_dict):
+
+        values = project_summaries_df[feature].tolist();
+        max_val = max(values);
+
+        if (feature in iwidths_dict):
+
+            iwidth = int(iwidths_dict[feature]);
+            num_intervals = int(max_val / iwidth) + 1; # '+1' because 0-1 will be its own interval.
+
+        else: # feature is in icounts_dict...
+
+            icount = int(icounts_dict[feature]);
+            iwidth = int(max_val / icount) + 1;
+            num_intervals = icount + 1; # '+1' because 0-1 will be its own interval.
+
+    else: # If user-defined interval info was left unspecified, use 1-unit width intervals.
+       
+        iwidth = 1;
+        num_intervals = project_summaries_df.shape[0];
+
+    return (iwidth, num_intervals);
+        
+
+
 # Get frequency distribution DataFrame for a group of project summaries for some feature.
-def get_feature_freq_dist_df(feature, project_summaries_df):
+def get_feature_freq_dist_df(feature, use_singleunit_iwidth, project_summaries_df):
     
     project_summaries_df = project_summaries_df.sort_values(by=[feature]); # Sort by values in feature observations.
     project_summaries_df = project_summaries_df.reset_index(drop=True); # Reset DataFrame indice.
@@ -1093,7 +1123,7 @@ def get_feature_freq_dist_df(feature, project_summaries_df):
     df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
     df.fillna(0.0);
     
-    feature_intervals_df = get_feature_intervals_df(feature, project_summaries_df);
+    feature_intervals_df = get_feature_intervals_df(feature, use_singleunit_iwidth, project_summaries_df);
     
     freq_dist_df = get_freq_dist_df(feature, project_summaries_df, feature_intervals_df);
     
@@ -1266,24 +1296,40 @@ def main():
             
             feature = FEATURES[i];
             
+            # This signifies the case where the user didn't specify either of the (implied) below.
+            # In this instance, force the interval width ('iwidth') to 1 unit.
+            if (feature not in iwidths_dict and
+                feature not in icounts_dict):
+                feature_freq_dist_df = get_feature_freq_dist_df(feature, True, project_summaries_df);
+                get_cdf(feature, feature_freq_dist_df);
+            else:
+                feature_freq_dist_df = get_feature_freq_dist_df(feature, False, project_summaries_df);
+                _feature_freq_dist_df = get_feature_freq_dist_df(feature, True, project_summaries_df); # Need this because CDF always relies on iwidth being =1;
+                get_cdf(feature, _feature_freq_dist_df);
+
             #process_distribution_figs(feature, project_summaries_df);
             
-            feature_freq_dist_df = get_feature_freq_dist_df(feature, project_summaries_df);
+            #feature_freq_dist_df = get_feature_freq_dist_df(feature, False, project_summaries_df);
+
+            #if (feature in iwidths_dict):
+            #    feature_val = iwidths_dict[feature];
+            #    if (feature_val > 1):
+            #_feature_freq_dist_df = get_feature_freq_dist_df(feature, True, project_summaries_df); # Need this because CDF always relies on iwidth being =1;
+            #get_cdf(feature, _feature_freq_dist_df);
 
             get_histogram(feature, feature_freq_dist_df);
-            get_cdf(feature, feature_freq_dist_df);
-
-            sheet_name = '{:09d}'.format(xlsx_sheet_num);
-            label = 'per_project_' + feature + '_intervals';
-            xlsx_page_index_lookup.append((sheet_name, label));
-            xlsx_sheet_num = xlsx_sheet_num + 1;
+            
+            sheet_name = feature;#'{:09d}'.format(xlsx_sheet_num);
+            #label = 'per_project_' + feature + '_intervals';
+            #xlsx_page_index_lookup.append((sheet_name, label));
+            #xlsx_sheet_num = xlsx_sheet_num + 1;
 
             dfs.append((feature_freq_dist_df, sheet_name, False));
         
-        df = pandas.DataFrame(xlsx_page_index_lookup, columns=['sheet', 'label']);
+        #df = pandas.DataFrame(xlsx_page_index_lookup, columns=['sheet', 'label']);
         #df['sheet'] = df['sheet'].apply(lambda s: '= \'{0}\''.format(s));
         #df['sheet'] = df['sheet'].apply(lambda s: s.replace('\'', ''));
-        dfs = [(df, 'index', False)] + dfs;
+        #dfs = [(df, 'index', False)] + dfs;
         pathstr, file_ext = os.path.splitext(args.data_store);
         dir_name = args.directory if args.directory else os.path.dirname(pathstr);
         filename = os.path.basename(pathstr);
