@@ -234,7 +234,7 @@ def prepare_records(old_ds_df):
 # Determine project (calculated) IDs from data store.
 def get_project_ids_df(ds_df):
 
-    project_ids_df = ds_df[['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo']];
+    project_ids_df = ds_df[['repo_remote_hostname', 'repo_owner', 'repo_name']];#, 'path_in_repo']];
     project_ids_df = project_ids_df.drop_duplicates(); # Eliminate duplicate DataFrame rows.
     project_ids_df = project_ids_df.reset_index(drop=True); # Reset DataFrame row indices.
     
@@ -266,7 +266,7 @@ def get_commit_patterns(project_ids_df, ds_df):
     hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
                                              ('repo_owner', '@repo_owner'),
                                              ('repo_name', '@repo_name'),
-                                             ('path_in_repo', '@path_in_repo'),
+                                             #('path_in_repo', '@path_in_repo'),
                                              ('date', '@committer_date_str'),
                                              ('num_lines_changed', '@num_lines_changed'),
                                              ('num_lines_inserted', '@num_lines_inserted'),
@@ -290,8 +290,8 @@ def get_commit_patterns(project_ids_df, ds_df):
 
         project_df = ds_df[(ds_df['repo_remote_hostname'] == project_ids_df.iloc[i]['repo_remote_hostname']) &
                            (ds_df['repo_owner'] == project_ids_df.iloc[i]['repo_owner']) &
-                           (ds_df['repo_name'] == project_ids_df.iloc[i]['repo_name']) &
-                           (ds_df['path_in_repo'] == project_ids_df.iloc[i]['path_in_repo'])];
+                           (ds_df['repo_name'] == project_ids_df.iloc[i]['repo_name'])];# &
+                           #(ds_df['path_in_repo'] == project_ids_df.iloc[i]['path_in_repo'])];
         
         num_commits = project_df.shape[0];
         pindex = [i+1 for c in range(0, num_commits)];
@@ -323,7 +323,7 @@ def get_commit_attribute_patterns(commit_attribute, ds_df):
     hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
                                              ('repo_owner', '@repo_owner'),
                                              ('repo_name', '@repo_name'),
-                                             ('path_in_repo', '@path_in_repo'),
+                                             #('path_in_repo', '@path_in_repo'),
                                              ('date', '@committer_date_str'),
                                              (commit_attribute, '@'+commit_attribute)]);
     
@@ -344,8 +344,8 @@ def get_commit_attribute_patterns(commit_attribute, ds_df):
 
         project_df = relevant_projects_df[(relevant_projects_df['repo_remote_hostname'] == project_ids_df.iloc[i]['repo_remote_hostname']) &
                                           (relevant_projects_df['repo_owner'] == project_ids_df.iloc[i]['repo_owner']) &
-                                          (relevant_projects_df['repo_name'] == project_ids_df.iloc[i]['repo_name']) &
-                                          (relevant_projects_df['path_in_repo'] == project_ids_df.iloc[i]['path_in_repo'])];
+                                          (relevant_projects_df['repo_name'] == project_ids_df.iloc[i]['repo_name'])];# &
+                                          #(relevant_projects_df['path_in_repo'] == project_ids_df.iloc[i]['path_in_repo'])];
         
         num_commits = project_df.shape[0];
         pindex = [i+1 for c in range(0, num_commits)];
@@ -482,7 +482,7 @@ def get_commit_attribute_activity(commit_attribute, orig_ds_df):
         hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
                                                  ('repo_owner', '@repo_owner'),
                                                  ('repo_name', '@repo_name'),
-                                                 ('path_in_repo', '@path_in_repo'),
+                                                 #('path_in_repo', '@path_in_repo'),
                                                  ('date', '@'+dt_str_column_name),
                                                  (commit_attribute, '@'+commit_attribute)]);
 
@@ -518,7 +518,8 @@ def get_commit_attribute_activity(commit_attribute, orig_ds_df):
         
         dtdelta_format_str = get_dtdelta_format_str2(dtdelta_code);
         
-        ID = ['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo', dt_column_name, dt_str_column_name];
+        #ID = ['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo', dt_column_name, dt_str_column_name];
+        ID = ['repo_remote_hostname', 'repo_owner', 'repo_name', dt_column_name, dt_str_column_name];
         ATTR = [commit_attribute];
         
         rel_projects_df = relevant_projects_df[ID + ATTR];
@@ -533,8 +534,8 @@ def get_commit_attribute_activity(commit_attribute, orig_ds_df):
             #project_df = _project_df.copy()
             project_df = rel_projects_df[(rel_projects_df['repo_remote_hostname'] == project_ids_df.iloc[j]['repo_remote_hostname']) &
                                               (rel_projects_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
-                                              (rel_projects_df['repo_name'] == project_ids_df.iloc[j]['repo_name']) &
-                                              (rel_projects_df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo'])];
+                                              (rel_projects_df['repo_name'] == project_ids_df.iloc[j]['repo_name'])];# &
+                                              #(rel_projects_df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo'])];
 
             #num_records = project_df.shape[0];
             #record_ids_df = project_df[ID];
@@ -610,7 +611,7 @@ def get_commit_attribute_cumsum(commit_attribute, orig_ds_df):
         hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
                                                  ('repo_owner', '@repo_owner'),
                                                  ('repo_name', '@repo_name'),
-                                                 ('path_in_repo', '@path_in_repo'),
+                                                 #('path_in_repo', '@path_in_repo'),
                                                  ('date', '@'+dt_str_column_name),
                                                  (commit_attribute, '@'+commit_attribute)]);
 
@@ -646,7 +647,8 @@ def get_commit_attribute_cumsum(commit_attribute, orig_ds_df):
         
         dtdelta_format_str = get_dtdelta_format_str2(dtdelta_code);
         
-        ID = ['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo', dt_column_name, dt_str_column_name];
+        #ID = ['repo_remote_hostname', 'repo_owner', 'repo_name', 'path_in_repo', dt_column_name, dt_str_column_name];
+        ID = ['repo_remote_hostname', 'repo_owner', 'repo_name', dt_column_name, dt_str_column_name];
         ATTR = [commit_attribute];
         
         rel_projects_df = relevant_projects_df[ID + ATTR];
@@ -661,8 +663,8 @@ def get_commit_attribute_cumsum(commit_attribute, orig_ds_df):
             #project_df = _project_df.copy()
             project_df = rel_projects_df[(rel_projects_df['repo_remote_hostname'] == project_ids_df.iloc[j]['repo_remote_hostname']) &
                                               (rel_projects_df['repo_owner'] == project_ids_df.iloc[j]['repo_owner']) &
-                                              (rel_projects_df['repo_name'] == project_ids_df.iloc[j]['repo_name']) &
-                                              (rel_projects_df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo'])];
+                                              (rel_projects_df['repo_name'] == project_ids_df.iloc[j]['repo_name'])];# &
+                                              #(rel_projects_df['path_in_repo'] == project_ids_df.iloc[j]['path_in_repo'])];
 
             i = project_df.groupby(ID).sum();
             i = i.reset_index();
@@ -762,7 +764,7 @@ def get_project_summaries_df(features, project_ids_df, ds_df):
     project_id_labels = ['repo_remote_hostname',
                          'repo_owner',
                          'repo_name',
-                         'path_in_repo'];
+                         'paths_in_repo'];
 
     COLUMN_LABELS = project_id_labels + features;
     
@@ -776,6 +778,7 @@ def get_project_summaries_df(features, project_ids_df, ds_df):
         
         project_id = project_ids_df.iloc[i]; # Get project ID.
         
+        paths_in_repo = list();
         commit_hashes = list();
         epochs = list();
         num_lines_changed = 0;
@@ -785,19 +788,20 @@ def get_project_summaries_df(features, project_ids_df, ds_df):
         
         commit_records = ds_df[(ds_df['repo_remote_hostname'] == project_id['repo_remote_hostname']) &
                                (ds_df['repo_owner'] == project_id['repo_owner']) &
-                               (ds_df['repo_name'] == project_id['repo_name']) &
-                               (ds_df['path_in_repo'] == project_id['path_in_repo'])]; # If commit record project ID matches project ID...
+                               (ds_df['repo_name'] == project_id['repo_name'])];# &
+                               #(ds_df['path_in_repo'] == project_id['path_in_repo'])]; # If commit record project ID matches project ID...
 
         #print commit_records
         num_commit_records = commit_records.shape[0];
         #num_commits_record = len(commit_records);#.shape[0];
 
         for j in range(0, num_commit_records): # For each commit record (row) in data store DataFrame...
-            
+
             #commit_record = ds_df.iloc[j]; # Get commit record.
             #commit_record = commit_records[j]; # Get commit record.
             commit_record = commit_records.iloc[j]; # Get commit record.
             #print commit_record
+            paths_in_repo.append(commit_record['path_in_repo']);
 
             commit_hashes.append(commit_record['commit_hash']);
              
@@ -811,7 +815,7 @@ def get_project_summaries_df(features, project_ids_df, ds_df):
         project_summaries_df.iloc[i]['repo_remote_hostname'] = project_id['repo_remote_hostname'];
         project_summaries_df.iloc[i]['repo_owner'] = project_id['repo_owner'];
         project_summaries_df.iloc[i]['repo_name'] = project_id['repo_name'];
-        project_summaries_df.iloc[i]['path_in_repo'] = project_id['path_in_repo'];
+        project_summaries_df.iloc[i]['paths_in_repo'] = tuple(list(set(paths_in_repo)));
         project_summaries_df.iloc[i]['total_num_commits'] = len(list(set(commit_hashes)));
         project_summaries_df.iloc[i]['total_num_lines_changed'] = num_lines_changed;
         project_summaries_df.iloc[i]['total_num_lines_inserted'] = num_lines_inserted;
@@ -908,7 +912,7 @@ def get_histogram(feature, orig_feature_freq_dist_df):
     hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
                                              ('repo_owner', '@repo_owner'),
                                              ('repo_name', '@repo_name'),
-                                             ('path_in_repo', '@path_in_repo'),
+                                             #('path_in_repo', '@path_in_repo'),
                                              (feature, '@'+feature)]);
     
     title = "Histogram (N=" + str(num_projects) + ")";
@@ -1224,7 +1228,7 @@ def get_feature_freq_dist_df(feature, use_singleunit_iwidth, project_summaries_d
     COLUMN_LABELS = ['repo_remote_hostname',
                      'repo_owner',
                      'repo_name',
-                     'path_in_repo',
+                     #'path_in_repo',
                      feature,
                      '>=',
                      '<',
@@ -1257,7 +1261,7 @@ def get_feature_freq_dist_df(feature, use_singleunit_iwidth, project_summaries_d
                 df.iloc[i]['repo_remote_hostname'] = project_summary['repo_remote_hostname'];
                 df.iloc[i]['repo_owner'] = project_summary['repo_owner'];
                 df.iloc[i]['repo_name'] = project_summary['repo_name'];
-                df.iloc[i]['path_in_repo'] = project_summary['path_in_repo'];
+                #df.iloc[i]['path_in_repo'] = project_summary['path_in_repo'];
                 df.iloc[i][feature] = feature_value;
                 df.iloc[i]['>='] = freq_dist['>='];
                 df.iloc[i]['<'] = freq_dist['<'];
@@ -1307,7 +1311,7 @@ def get_cdf(feature, orig_feature_freq_dist_df):
     hover = bokeh.models.HoverTool(tooltips=[('repo_remote_hostname', '@repo_remote_hostname'),
                                              ('repo_owner', '@repo_owner'),
                                              ('repo_name', '@repo_name'),
-                                             ('path_in_repo', '@path_in_repo'),
+                                             #('path_in_repo', '@path_in_repo'),
                                              (feature, '@'+feature)]);
     
     title = "Cumulative Distribution Function (N=" + str(num_projects) + ")";
