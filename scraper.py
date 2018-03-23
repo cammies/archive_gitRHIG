@@ -70,7 +70,6 @@ def check_args():
             if (os.path.exists(data_store)):
                 
                 ds_df = sh.load_from_data_store(data_store);
-            
                 if (ds_df.empty): # Meaning 'ds_df' is None...
                     sys.exit('Bad data store source \'' + args.data_store + '\'.');
 

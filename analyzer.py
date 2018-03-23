@@ -87,17 +87,10 @@ def check_args():
     if (args.data_store):
        
         data_store = args.data_store;
-            
-        if (os.path.exists(data_store)): # If destination data store already exists, check its structure...
-            
-            ds_df = sh.load_commits_data_store(data_store);
-            if (ds_df is None):
-                sys.exit("Malformed data store \'" + data_store + "\'.");
-
-            args.data_store = os.path.abspath(data_store);
         
-        else:
-            sys.exit("\'" + data_store + "\' does not refer to a data store.");
+        ds_df = sh.load_from_data_store(data_store);
+        if (ds_df.empty): # Meaning 'ds_df' is None...
+            sys.exit('Bad data store source \'' + args.data_store + '\'.');
         
     else:
         sys.exit("Must specify an input data store!");
