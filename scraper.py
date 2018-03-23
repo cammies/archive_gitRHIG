@@ -11,6 +11,7 @@ import pandas; # DataFrame handling.
 import re; # Regular expressions.
 import subprocess; # Invoke git applications.
 import sys; # Script termination.
+import sqlite3; # Database processing.
 import time; # Ststem time.
 import urlparse; # URL parsing.
 
@@ -19,7 +20,9 @@ import urlparse; # URL parsing.
 
 args = None; # For script arguments object.
 
-ds_df = None; # Data store DataFrame.
+ds_df = pandas.DataFrame(); # Data store DataFrame.
+
+db_conn = None;
 
 path_to_repo = ''; # Local environment path to repository.
 
@@ -50,6 +53,7 @@ def process_args():
 def check_args():
     
     global ds_df;
+    global db_conn;
     
     # Repo sources (URIs and corresponding paths).
     if (args.sources):
@@ -57,23 +61,23 @@ def check_args():
     if (not args.sources):
         sys.exit("Must provide at least one valid repository URI.");
     
-    # Output file.
+    # Output data sore object.
     if (args.data_store):
        
         data_store = args.data_store;
         if (sh.is_writable_file(data_store)): # If destination data store is cleared for writing...
-            
-            if (os.path.exists(data_store)): # If destination data store already exists, check its structure...
+           
+            if (os.path.exists(data_store)):
                 
-                ds_df = sh.load_commits_data_store(data_store);
-                if (ds_df is None):
-                    sys.exit("Malformed data store \'" + data_store + "\'.");
+                ds_df = sh.load_from_data_store(data_store);
             
-            args.data_store = os.path.abspath(data_store);
-        
+                if (ds_df.empty): # Meaning 'ds_df' is None...
+                    sys.exit('Bad data store source \'' + args.data_store + '\'.');
+
+                args.data_store = os.path.abspath(data_store);
         else:
             sys.exit();
-
+            
     else: # Default output data store destination
         args.data_store = 'scraper-data_store-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3] + '.xlsx';
     
@@ -355,15 +359,16 @@ def get_commits_df():
 def push_commit_records(commits_df, title, destination):
     
     global ds_df;
+    global db_conn;
 
-    if (ds_df is not None): # If destination already exists...
+    if (not ds_df.empty): # If destination already exists...
         ds_df = pandas.concat([ds_df, commits_df]); # Concatenate existing commits DataFrame (from data store) with commits DataFrame.
-        ds_df = ds_df.drop_duplicates().reset_index(drop=True); # Eliminate any duplicate DataFrame rows.
+        ds_df = ds_df.drop_duplicates(); # Eliminate any duplicate DataFrame rows.
+        ds_df = ds_df.reset_index(drop=True); # Reset DataFrame rows indices.
     else:
         ds_df = commits_df;
 
-
-    sh.write_dfs_to_file([(ds_df, title, False)], destination);
+    sh.push_to_data_store(ds_df, title, False, destination, db_conn);
     
     return;
 

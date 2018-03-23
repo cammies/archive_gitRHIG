@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 
+import ast;
 import chardet; # Detect string encoding.
 import datetime; # Datetime handling.
 import dateutil.parser as dtparser;
@@ -10,6 +11,7 @@ import pandas; # DataFrame handling.
 import subprocess; # Git commands.
 import urlparse; # URI parsing.
 import requests; # HTTP requests.
+import sqlite3; # Database processing.
 
 
 # Update basepath in URI path.
@@ -585,5 +587,59 @@ def load_repo_files_data_store(data_store):
     
     except:
         return None;
+
+
+# Export data store DataFrame to object on disk.
+def push_to_data_store(df, sheet_name, index, destination, db_conn):
+
+    if (destination.endswith('.xlsx')): # Consider this as a spreadshet file...
+        write_dfs_to_file([(df, sheet_name, index)], destination);
+    elif (destination.endswith('.db')):
+        db_conn = sqlite3.connect(destination);
+        df['labels']= df['labels'].astype('str'); # Because sqlite3 does not support tuples.
+        df.to_sql('commits', db_conn, if_exists='replace', index=False);
+        db_conn.close();
+
+    
+# Get data store DataFrame from data store object on disk.
+def load_from_data_store(source):
+
+    COLUMN_LABELS = ['repo_remote_hostname', 'repo_owner', 'repo_name',
+                     'path_in_repo',
+                     'labels',
+                     'commit_hash',
+                     'author_name', 'author_email', 'author_epoch',
+                     'committer_name', 'committer_email', 'committer_epoch',
+                     'subject', 'len_subject',
+                     'num_files_changed',
+                     'num_lines_changed', 'num_lines_inserted', 'num_lines_deleted', 'num_lines_modified'];
+
+    ds_df = pandas.DataFrame();
+
+    try:
+        
+        if (source.endswith('.xlsx')): # Consider this as a spreadshet file...
+        
+            xlsx = pandas.ExcelFile(source); # Load spreadsheet file.
+            ds_df = xlsx.parse(); # Import data store to DataFrame.
+            
+        elif (source.endswith('.db')):
+            
+            db_conn = sqlite3.connect(source);
+            ds_df = pandas.read_sql_query('SELECT * FROM commits;', db_conn);
+            ds_df['labels'] = ds_df['labels'].apply(lambda l: ast.literal_eval(l));
+            #print ds_df
+            #print ds_df['labels'];
+        
+        for column_label in COLUMN_LABELS: # Ensure each column name in DataFrame is what is expected in commits data store...
+            
+            if (column_label not in ds_df.columns):
+                return ds_df;
+        
+        return ds_df;
+    
+    except:
+        
+        return ds_df;
 
 
