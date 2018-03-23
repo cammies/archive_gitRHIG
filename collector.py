@@ -366,15 +366,15 @@ def is_bare_repo(path_to_repo):
 # Clone repository or just fetch its latest changes.
 def update_local_repo(repo_url):
     
-    url_path = urlparse.urlparse(repo_url)[2];
-    repo_owner = os.path.basename(os.path.abspath(os.path.join(url_path, os.pardir))); # Get name of parent directory in path.
-    repo_name = os.path.basename(url_path);
+    repo_remote_hostname, repo_owner, repo_name = sh.get_repo_id(repo_url);
 
     if (args.anonymize):
+        repo_remote_hostname = sh.get_hash_str(repo_remote_hostname);
         repo_owner = sh.get_hash_str(repo_owner);
         repo_name = sh.get_hash_str(repo_name);
     
-    path_to_repo = sh.add_path_to_uri(repo_owner, repo_name);
+    path_to_repo = sh.add_path_to_uri(repo_remote_hostname, repo_owner);
+    path_to_repo = sh.add_path_to_uri(path_to_repo, repo_name);
     abspath_to_repo = sh.add_path_to_uri(args.directory, path_to_repo);
     
     clone_repo = False;

@@ -108,19 +108,6 @@ def echo_args():
     print("[global] Until: " + args.until);
 
 
-# Extract GitHub hostname, repo owner, and repo name from remote origin URL.
-def get_repo_id(remote_origin_url):
-    
-    url = re.findall(r'^.+[://|@].+[:|/].+/.+', remote_origin_url);
-
-    (repo_remote_hostname, repo_owner, repo_name) = re.findall(r'^.+[://|@](.+)[:|/](.+)/(.+)', url[0])[0];
-    
-    if (repo_name.endswith('.git')):
-        repo_name = repo_name[:-4]; # Remove the '.git' from repo name.
-
-    return repo_remote_hostname, repo_owner, repo_name;
-
-
 # Parse information on files affected in a single commit.
 def get_commit_filenames(files_str):
     
@@ -397,7 +384,7 @@ def process_project():
         return True;    
 
     else: # Commits list is empty...
-        print('\033[93m' + sh.get_warning_str("No relevant commits found") + '\033[m');
+        print(sh.get_warning_str("No relevant commits found"));
         return False;
 
 
@@ -434,7 +421,7 @@ def main():
         path_to_repo = os.path.abspath(path_to_repo);
         
         remote_origin_url = sh.get_remote_origin_url(path_to_repo);
-        repo_remote_hostname, repo_owner, repo_name = get_repo_id(remote_origin_url);
+        repo_remote_hostname, repo_owner, repo_name = sh.get_repo_id(remote_origin_url);
         if (args.anonymize):
             repo_remote_hostname = sh.get_hash_str(repo_remote_hostname);
             repo_owner = sh.get_hash_str(repo_owner);

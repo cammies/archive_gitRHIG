@@ -10,6 +10,7 @@ import os; # File, directory handling.
 import pandas; # DataFrame handling.
 import subprocess; # Git commands.
 import urlparse; # URI parsing.
+import re; # Regular expressions.
 import requests; # HTTP requests.
 import sqlite3; # Database processing.
 
@@ -641,5 +642,18 @@ def load_from_data_store(source):
     except:
         
         return ds_df;
+
+
+# Extract GitHub hostname, repo owner, and repo name from remote origin URL.
+def get_repo_id(remote_origin_url):
+    
+    url = re.findall(r'^.+[://|@].+[:|/].+/.+', remote_origin_url);
+
+    (repo_remote_hostname, repo_owner, repo_name) = re.findall(r'^.+[://|@](.+)[:|/](.+)/(.+)', url[0])[0];
+    
+    if (repo_name.endswith('.git')):
+        repo_name = repo_name[:-4]; # Remove the '.git' from repo name.
+
+    return repo_remote_hostname, repo_owner, repo_name;
 
 
