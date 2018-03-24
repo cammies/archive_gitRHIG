@@ -18,7 +18,7 @@ import urlparse; # URL parsing
 
 # Global variables.
 
-args = ''; # For script arguments object.
+args = None; # For script arguments object.
 
 session = requests.Session(); # Session (used to make authenticated GitHub web requests.
 
@@ -46,7 +46,6 @@ def process_args():
     argparser.add_argument('-u','--username', help="process repos of a specific GitHub user", type=str);
     argparser.add_argument('-d','--directory', help="runtime working directory", type=str);
     argparser.add_argument('-o','--outfile', help="output file for local repo paths", type=str);
-    #argparser.add_argument('-q','--query', help="process only repos with specific words in their names", type=str);
     argparser.add_argument('-q','--query', help="process only repos with key words in URL", type=str);
     argparser.add_argument('-r','--retrieve', help="clone repos to local machine", action="store_true");
     argparser.add_argument('-b','--bare', help="clone bare repos to local machine", action="store_true");
@@ -71,7 +70,7 @@ def auth_provided():
 
 
 # Construct GitHub API repo URL from its HTTPS repo URL.
-def build_github_api_url(github_host_url):
+def construct_github_api_url(github_host_url):
     
     (scheme, netloc, path, params, query, fragment) = urlparse.urlparse(github_host_url);
     
@@ -95,7 +94,6 @@ def valid_auth(github_api_url):
         auth_type = 'access token';
         request = requests.get(github_api_url, headers={'Authorization': 'token %s' % access_token});
     #elif (args.oauth):
-        # global ...
         # auth_type = 'OAuth';
         # request = requests.get(github_api_url, ...);
 
@@ -169,7 +167,7 @@ def scrub_credentials_info():
 
 
 #
-def good_github_host(github_api_url):
+def good_github_hostname(github_api_url):
 
     if (sh.is_url(github_api_url)):
 
@@ -209,8 +207,8 @@ def check_args():
             print("Must specify authentication prompt!");
             sys.exit();
         global github_api_url;
-        github_api_url = build_github_api_url(args.host);
-        #if (good_github_host(github_api_url)):
+        github_api_url = construct_github_api_url(args.host);
+        #if (good_github_hostname(github_api_url)):
         if (authenticate(github_api_url)):
             authenticate_session();
         else:
@@ -220,7 +218,7 @@ def check_args():
         #    print("Bad GitHub host \'" + args.host + "\'.");
         #    sys.exit();
     elif (not args.host and not args.sources):
-        print("Must provide either a GitHub host URL or repo URLs.");
+        print("Must provide either a GitHub hostname or repo URLs.");
         sys.exit();
     
     # Repo sources (URIs and corresponding paths).
@@ -398,7 +396,6 @@ def update_local_repo(repo_url):
 
             cmd_str = 'git clone %s %s %s' % (b,url,p);
             #print(cmd_str);
-
             sp = subprocess.Popen(cmd_str,
                                   stdout=subprocess.PIPE,
                                   #stderr=subprocess.STDOUT,
@@ -411,17 +408,14 @@ def update_local_repo(repo_url):
             
             cmd_str = 'git clone %s %s' % (url,p);
             #print(cmd_str);
-            
             sp = subprocess.Popen(cmd_str,
                                   stdout=subprocess.PIPE,
                                   #stderr=subprocess.STDOUT,
                                   shell=True);
-            
             sp.wait();
         
     else: # ...Or just update existing repo...
    
-        
         bare = is_bare_repo(abspath_to_repo);
         
         gd = '--git-dir=\'' + abspath_to_repo + '/.git/\'';
@@ -434,12 +428,10 @@ def update_local_repo(repo_url):
 
             cmd_str = 'git %s fetch %s master:master' % (gd,q);
             #print(cmd_str);
-            
             sp = subprocess.Popen(cmd_str,
                                   stdout=subprocess.PIPE,
                                   #stderr=subprocess.STDOUT,
                                   shell=True);
-            
             sp.wait();
         
         else:
@@ -452,32 +444,26 @@ def update_local_repo(repo_url):
             
             cmd_str = 'git %s %s reset %s' % (gd,wt,h);
             #print(cmd_str);
-
             sp = subprocess.Popen(cmd_str,
                                   stdout=subprocess.PIPE,
                                   #stderr=subprocess.STDOUT,
                                   shell=True);
-            
             sp.wait();
             
             cmd_str = 'git %s %s clean %s' % (gd,wt,x);
             #print(cmd_str);
-            
             sp = subprocess.Popen(cmd_str,
                                   stdout=subprocess.PIPE,
                                   #stderr=subprocess.STDOUT,
                                   shell=True);
-            
             sp.wait();
             
             cmd_str = 'git %s %s pull' % (gd,wt);
             #print(cmd_str);
-            
             sp = subprocess.Popen(cmd_str,
                                   stdout=subprocess.PIPE,
                                   #stderr=subprocess.STDOUT,
                                   shell=True);
-            
             sp.wait();
     
     print("Done.");
