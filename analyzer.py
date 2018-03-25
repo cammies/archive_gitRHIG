@@ -30,7 +30,7 @@ args = ''; # For script arguments object.
 commit_info_df = ''; # For data store DataFrame.
 committed_files_df = ''; # For data store DataFrame.
 
-iwidths_dict = None;
+class_widths = None;
 num_classes_dict = None;
 
 figs_list = list(); # List of distribution figures.
@@ -53,7 +53,7 @@ def process_args():
     
     argparser.add_argument('--data-store', help="input data store", type=str);
     argparser.add_argument('--paths-as-projects', help="is each repo path considered its own project?", action="store_true");
-    argparser.add_argument('--iwidths', help="interval width", type=str);
+    argparser.add_argument('--class-widths', help="interval width", type=str);
     argparser.add_argument('--num-classes', help="interval count", type=str);
     argparser.add_argument('-d','--directory', help="runtime working directory", type=str);
     argparser.add_argument('--dt-deltas', help="which datetime deltas to consider", type=str);
@@ -96,8 +96,8 @@ def check_args():
     else:
         sys.exit("Must specify an input data store!");
     
-    global iwidths_dict;
-    iwidths_dict = sh.get_intervals_dict(args.iwidths);
+    global class_widths;
+    class_widths = sh.get_intervals_dict(args.class_widths);
     
     global num_classes_dict;
     num_classes_dict = sh.get_intervals_dict(args.num_classes);
@@ -1055,7 +1055,7 @@ def get_histogram_intervals_df(feature, project_summaries_df):
 
     df = pandas.DataFrame();
 
-    global iwidths_dict;
+    global class_widths;
     global num_classes_dict;
     
     values = project_summaries_df[feature].tolist();
@@ -1079,7 +1079,13 @@ def get_histogram_intervals_df(feature, project_summaries_df):
     init_num_classes = max(min_num_classes, init_num_classes);
     num_classes = init_num_classes;
 
-    h = int(vals_range_width / num_classes) + 1; # Optimal class width.
+    if (feature in class_widths):
+        h = int(class_widths[feature]);
+        num_classes = int(vals_range_width / h);
+        if ((vals_range_width % h) > 0):
+            num_classes = num_classes + 1;
+    else:
+        h = int(vals_range_width / num_classes) + 1; # Optimal class width.
 
     ROW_LABELS = [r for r in range(0, num_classes)];
 
@@ -1104,7 +1110,7 @@ def get_histogram_intervals_df(feature, project_summaries_df):
 #
 def get_feature_intervals_df(feature, use_singleunit_iwidth, project_summaries_df):
     
-    global iwidths_dict;
+    global class_widths;
     global num_classes_dict;
     
     if (use_singleunit_iwidth): # If user-defined interval info was left unspecified, use 1-unit width intervals.
@@ -1113,7 +1119,6 @@ def get_feature_intervals_df(feature, use_singleunit_iwidth, project_summaries_d
 
         df = pandas.DataFrame();
 
-        iwidth = 1;
         num_intervals = project_summaries_df.shape[0];
     
         ROW_LABELS = [r for r in range(0, num_intervals)];
@@ -1424,7 +1429,7 @@ def main():
             
             # This signifies the case where the user didn't specify either of the (implied) below.
             # In this instance, force the interval width ('iwidth') to 1 unit.
-            if (feature not in iwidths_dict and
+            if (feature not in class_widths and
                 feature not in num_classes_dict):
                 feature_freq_dist_df = get_feature_freq_dist_df(feature, True, project_summaries_df);
                 get_cdf(feature, feature_freq_dist_df);
@@ -1437,8 +1442,8 @@ def main():
             
             #feature_freq_dist_df = get_feature_freq_dist_df(feature, False, project_summaries_df);
 
-            #if (feature in iwidths_dict):
-            #    feature_val = iwidths_dict[feature];
+            #if (feature in class_widths):
+            #    feature_val = class_widths[feature];
             #    if (feature_val > 1):
             #_feature_freq_dist_df = get_feature_freq_dist_df(feature, True, project_summaries_df); # Need this because CDF always relies on iwidth being =1;
             #get_cdf(feature, _feature_freq_dist_df);
