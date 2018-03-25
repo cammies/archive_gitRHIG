@@ -10,7 +10,7 @@ import bokeh.palettes; # Graph color palettes.
 import bokeh.plotting; # Graph plot handling.
 import datetime;
 import io; # File writing.
-#import math;
+import math;
 import modules.shared as sh;
 import numpy; # CDF, histogram graphs.
 import os; # File, directory handling.
@@ -31,13 +31,13 @@ commit_info_df = ''; # For data store DataFrame.
 committed_files_df = ''; # For data store DataFrame.
 
 iwidths_dict = None;
-icounts_dict = None;
+num_classes_dict = None;
 
 figs_list = list(); # List of distribution figures.
 
 xlsfiles = list(); # Keep track of output XLS filenames.
 
-font_size = "12pt"; # Font size for text in output graphs.
+font_size = "18pt"; # Font size for text in output graphs.
 
 dfs = list();
 
@@ -54,7 +54,7 @@ def process_args():
     argparser.add_argument('--data-store', help="input data store", type=str);
     argparser.add_argument('--paths-as-projects', help="is each repo path considered its own project?", action="store_true");
     argparser.add_argument('--iwidths', help="interval width", type=str);
-    argparser.add_argument('--icounts', help="interval count", type=str);
+    argparser.add_argument('--num-classes', help="interval count", type=str);
     argparser.add_argument('-d','--directory', help="runtime working directory", type=str);
     argparser.add_argument('--dt-deltas', help="which datetime deltas to consider", type=str);
     argparser.add_argument('--labels', help="label commit records", type=str);
@@ -99,8 +99,8 @@ def check_args():
     global iwidths_dict;
     iwidths_dict = sh.get_intervals_dict(args.iwidths);
     
-    global icounts_dict;
-    icounts_dict = sh.get_intervals_dict(args.icounts);
+    global num_classes_dict;
+    num_classes_dict = sh.get_intervals_dict(args.num_classes);
     
     # Working directory.
     args.directory = sh.get_wd(args.directory);
@@ -182,7 +182,7 @@ def prepare_records(old_ds_df):
         
         elif (args.labels):
             
-            commit_record_labels_tuple = ast.literal_eval(commit_record['labels']);
+            commit_record_labels_tuple = commit_record['labels']
             include_commit_record = False;
             for label in args.labels: # For EACH user-supplied label...
                 
@@ -274,7 +274,7 @@ def get_commit_patterns(project_ids_df, ds_df):
                               title=plot_title,
                               x_axis_label="Date",
                               x_axis_type='datetime',
-                              y_axis_label="Project");
+                              y_axis_label="Project Repository");
     
     p.title.align='center';
     p.title.text_font_size=font_size;
@@ -946,7 +946,7 @@ def get_histogram(feature, orig_feature_freq_dist_df):
                               tools=[hover, 'wheel_zoom', 'box_zoom', 'pan', 'save, ''reset'],
                               title=title,
                               x_axis_label=feature_title,
-                              y_axis_label='Number of Projects',
+                              y_axis_label='Number of Project Repositories',
                               );
     
     p.title.align='center';
@@ -1049,17 +1049,70 @@ def calc_interval_end(num):
 
 
 #
-def get_feature_intervals_df(feature, use_singleunit_iwidth, project_summaries_df):
+def get_histogram_intervals_df(feature, project_summaries_df):
     
     COLUMN_LABELS = ['>=', '<'];
 
     df = pandas.DataFrame();
 
     global iwidths_dict;
-    global icounts_dict;
+    global num_classes_dict;
+    
+    values = project_summaries_df[feature].tolist();
+
+    num_observs = len(values);
+    
+    min_val = min(values);
+    max_val = max(values);
+
+    vals_range_width = max_val - min_val; # Calc width of range of values.
+
+    min_num_classes = 1;
+    max_num_classes = 1 + int((3.3 * math.log10(num_observs))); # https://en.wikipedia.org/wiki/Frequency_distribution#Construction_of_frequency_distributions.
+    
+    if (feature in num_classes_dict):
+        init_num_classes = int(num_classes_dict[feature]);
+    else:
+        init_num_classes = float('inf');
+        
+    init_num_classes = min(init_num_classes, max_num_classes);
+    init_num_classes = max(min_num_classes, init_num_classes);
+    num_classes = init_num_classes;
+
+    h = int(vals_range_width / num_classes) + 1; # Optimal class width.
+
+    ROW_LABELS = [r for r in range(0, num_classes)];
+
+    df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
+    df.fillna(0.0);
+
+    for i in range(0, num_classes):
+
+        from_value = min_val + (i * h);
+        to_value = from_value + h;
+        #df.iloc[i]['>='] = calc_interval_begin(from_value);
+        df.iloc[i]['>='] = from_value; # '+1' to skip 0 in first loop.
+        df.iloc[i]['<'] = to_value;
+
+    intervals_df = df[['>=','<']];
+    intervals_df = intervals_df.drop_duplicates(); # Eliminate duplicate DataFrame rows.
+    intervals_df = intervals_df.reset_index(drop=True); # Reset DataFrame row indices.
+
+    return intervals_df;
+
+
+#
+def get_feature_intervals_df(feature, use_singleunit_iwidth, project_summaries_df):
+    
+    global iwidths_dict;
+    global num_classes_dict;
     
     if (use_singleunit_iwidth): # If user-defined interval info was left unspecified, use 1-unit width intervals.
        
+        COLUMN_LABELS = ['>=', '<'];
+
+        df = pandas.DataFrame();
+
         iwidth = 1;
         num_intervals = project_summaries_df.shape[0];
     
@@ -1075,50 +1128,13 @@ def get_feature_intervals_df(feature, use_singleunit_iwidth, project_summaries_d
             df.iloc[i]['>='] = calc_interval_begin(from_value);
             df.iloc[i]['<'] = calc_interval_end(to_value);
 
-    elif (feature in iwidths_dict or
-          feature in icounts_dict):
-
-        values = project_summaries_df[feature].tolist();
-        max_val = max(values);
-
-        if (feature in iwidths_dict):
-
-            iwidth = int(iwidths_dict[feature]);
-            num_intervals = int(max_val / iwidth);
-
-        else: # feature is in icounts_dict...
-
-            icount = int(icounts_dict[feature]);
-            if (icount > max_val):
-                print(sh.get_warning_str("\'icount\' >= <max value> in observations"));
-                print("Using " + str(max_val) + " intervals");
-                iwidth = 1;
-                num_intervals = max_val;
-            else:
-                iwidth = int(max_val / icount);
-                num_intervals = icount;
-
-        ROW_LABELS = [r for r in range(0, num_intervals+1)]; # '+1' because 0-1 will be its own interval.
-        
-        df = pandas.DataFrame(index=ROW_LABELS, columns=COLUMN_LABELS);
-        df.fillna(0.0);
-        
-        df.iloc[0]['>='] = 0; # First interval will be from 0...
-        df.iloc[0]['<'] = 1; # ...to 1.
-        for i in range(0, num_intervals):
-
-            from_value = i * iwidth;
-            to_value = from_value + iwidth;
-            #df.iloc[i]['>='] = calc_interval_begin(from_value);
-            df.iloc[i+1]['>='] = calc_interval_begin(from_value+1); # '+1' to skip 0 in first loop.
-            df.iloc[i+1]['<'] = calc_interval_end(to_value);
-
+        intervals_df = df[['>=','<']];
+        intervals_df = intervals_df.drop_duplicates(); # Eliminate duplicate DataFrame rows.
+        intervals_df = intervals_df.reset_index(drop=True); # Reset DataFrame row indices.
+    
     else:
-        sys.exit("Oh d-dear!");
-
-    intervals_df = df[['>=','<']];
-    intervals_df = intervals_df.drop_duplicates(); # Eliminate duplicate DataFrame rows.
-    intervals_df = intervals_df.reset_index(drop=True); # Reset DataFrame row indices.
+        
+        intervals_df = get_histogram_intervals_df(feature, project_summaries_df);
 
     return intervals_df;
 
@@ -1203,38 +1219,6 @@ def get_freq_dist_df(feature, project_summaries_df, feature_intervals_df):
     #dfs.append((writable_df, sheet_name, False));
         
     return df;
-
-
-#
-def get_iwidth_and_num_intervals(feature, project_summaries_df):
-
-    first_value_offset = project_summaries_df.iloc[i][feature]; # Get feature value for project i.
-    global iwidths_dict;
-    global icounts_dict;
-    if (feature in iwidths_dict or
-        feature in icounts_dict):
-
-        values = project_summaries_df[feature].tolist();
-        max_val = max(values);
-
-        if (feature in iwidths_dict):
-
-            iwidth = int(iwidths_dict[feature]);
-            num_intervals = int(max_val / iwidth) + 1; # '+1' because 0-1 will be its own interval.
-
-        else: # feature is in icounts_dict...
-
-            icount = int(icounts_dict[feature]);
-            iwidth = int(max_val / icount) + 1;
-            num_intervals = icount + 1; # '+1' because 0-1 will be its own interval.
-
-    else: # If user-defined interval info was left unspecified, use 1-unit width intervals.
-       
-        iwidth = 1;
-        num_intervals = project_summaries_df.shape[0];
-
-    return (iwidth, num_intervals);
-        
 
 
 # Get frequency distribution DataFrame for a group of project summaries for some feature.
@@ -1441,7 +1425,7 @@ def main():
             # This signifies the case where the user didn't specify either of the (implied) below.
             # In this instance, force the interval width ('iwidth') to 1 unit.
             if (feature not in iwidths_dict and
-                feature not in icounts_dict):
+                feature not in num_classes_dict):
                 feature_freq_dist_df = get_feature_freq_dist_df(feature, True, project_summaries_df);
                 get_cdf(feature, feature_freq_dist_df);
             else:
@@ -1458,8 +1442,9 @@ def main():
             #    if (feature_val > 1):
             #_feature_freq_dist_df = get_feature_freq_dist_df(feature, True, project_summaries_df); # Need this because CDF always relies on iwidth being =1;
             #get_cdf(feature, _feature_freq_dist_df);
-
-            get_histogram(feature, feature_freq_dist_df);
+            
+            hfd = get_feature_freq_dist_df(feature, False, project_summaries_df);
+            get_histogram(feature, hfd);
             
             sheet_name = feature;#'{:09d}'.format(xlsx_sheet_num);
             #label = 'per_project_' + feature + '_intervals';
