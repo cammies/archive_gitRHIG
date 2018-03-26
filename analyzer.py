@@ -182,7 +182,7 @@ def prepare_records(old_ds_df):
         
         elif (args.labels):
             
-            commit_record_labels_tuple = commit_record['labels']
+            commit_record_labels_tuple = commit_record['labels'];
             include_commit_record = False;
             for label in args.labels: # For EACH user-supplied label...
                 
@@ -823,7 +823,7 @@ def get_project_summaries_df(features, project_ids_df, ds_df):
             #commit_record = commit_records[j]; # Get commit record.
             commit_record = commit_records.iloc[j]; # Get commit record.
             #print commit_record
-            paths_in_repo.append(commit_record['path_in_repo']);
+            paths_in_repo.append(str(commit_record['path_in_repo']));
 
             commit_hashes.append(commit_record['commit_hash']);
              
